@@ -1,30 +1,118 @@
-/target/
+# ========================
+# Build systems
+# ========================
 
-.classpath
+# Gradle
+.gradle/
+build/
+out/
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+
+# ========================
+# IDE
+# ========================
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Eclipse
 .project
-/.settings/
+.classpath
+.settings/
 
-# Compiled class file
-*.class
+# VSCode
+.vscode/
 
-# Log file
+# ========================
+# OS
+# ========================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# Linux
+*~
+
+# ========================
+# Logs & temp
+# ========================
+
 *.log
+logs/
+tmp/
+temp/
 
-# BlueJ files
-*.ctxt
+# ========================
+# Java
+# ========================
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
+*.class
 *.jar
 *.war
-*.nar
 *.ear
+
+# ========================
+# JMonkeyEngine specific
+# ========================
+
+# Compiled shaders / cache
+.j3o/
+.jme3/
+
+# Local assets cache (optionnel selon config)
+assets/cache/
+
+# ========================
+# Runtime files
+# ========================
+
+*.pid
+*.seed
+
+# ========================
+# Environment / secrets
+# ========================
+
+.env
+.env.*
+*.key
+*.pem
+
+# ========================
+# Archives
+# ========================
+
 *.zip
-*.tar.gz
+*.tar
+*.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+# ========================
+# Coverage / reports
+# ========================
+
+coverage/
+*.exec
+
+# ========================
+# Misc
+# ========================
+
+*.swp
+*.swo
