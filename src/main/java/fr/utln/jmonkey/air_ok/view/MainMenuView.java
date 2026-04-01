@@ -6,13 +6,17 @@ import com.simsilica.lemur.Label;
 
 public class MainMenuView {
     private Container mainContainer;
-    private Button startButton;
+    private Button onePlayerButton;
+    private Button twoPlayerButton;
+    private Button tournamentButton;
     private Button quitButton;
 
     public MainMenuView(String title) {
         mainContainer = new Container();
         mainContainer.addChild(new Label(title));
-        startButton = mainContainer.addChild(new Button("Lancer une partie"));
+        onePlayerButton = mainContainer.addChild(new Button("1 Joueur"));
+        twoPlayerButton = mainContainer.addChild(new Button("2 Joueurs"));
+        tournamentButton = mainContainer.addChild(new Button("Tournoi"));
         quitButton = mainContainer.addChild(new Button("Quitter"));
     }
 
@@ -20,8 +24,16 @@ public class MainMenuView {
         return mainContainer;
     }
 
-    public Button getStartButton() {
-        return startButton;
+    public Button getOnePlayerButton() {
+        return onePlayerButton;
+    }
+
+    public Button getTwoPlayerButton() {
+        return twoPlayerButton;
+    }
+
+    public Button getTournamentButton() {
+        return tournamentButton;
     }
 
     public Button getQuitButton() {

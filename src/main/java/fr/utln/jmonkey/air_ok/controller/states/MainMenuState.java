@@ -1,4 +1,4 @@
-package fr.utln.jmonkey.air_ok.controller;
+package fr.utln.jmonkey.air_ok.controller.states;
 
 import com.jme3.app.Application;
 import com.jme3.app.SimpleApplication;
@@ -7,7 +7,7 @@ import com.jme3.app.state.BaseAppState;
 import fr.utln.jmonkey.air_ok.model.MenuModel;
 import fr.utln.jmonkey.air_ok.view.MainMenuView;
 
-public class MainMenuController extends BaseAppState {
+public class MainMenuState extends BaseAppState {
     private MainMenuView view;
     private MenuModel model;
 
@@ -24,13 +24,25 @@ public class MainMenuController extends BaseAppState {
 
         view.getMainContainer().setLocalTranslation(menuX, menuY, 0);
 
-        view.getStartButton().addClickCommands(source -> startGame());
+        view.getOnePlayerButton().addClickCommands(source -> startOnePlayerGame());
+        view.getTwoPlayerButton().addClickCommands(source -> startTwoPlayerGame());
+        view.getTournamentButton().addClickCommands(source -> startTournament());
         view.getQuitButton().addClickCommands(source -> app.stop());
     }
 
-    private void startGame() {
+    private void startOnePlayerGame() {
+        getStateManager().detach(this);
+        getStateManager().attach(new EndScreenState());
+    }
 
-        this.setEnabled(false);
+    private void startTwoPlayerGame() {
+        getStateManager().detach(this);
+        getStateManager().attach(new EndScreenState());
+    }
+
+    private void startTournament() {
+        getStateManager().detach(this);
+        getStateManager().attach(new EndScreenState());
     }
 
     @Override

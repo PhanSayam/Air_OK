@@ -4,7 +4,7 @@ import com.jme3.app.SimpleApplication;
 import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.style.BaseStyles;
 
-import fr.utln.jmonkey.air_ok.controller.MainMenuController;
+import fr.utln.jmonkey.air_ok.controller.states.MainMenuState;
 
 public class MainGameApp extends SimpleApplication {
 
@@ -17,9 +17,9 @@ public class MainGameApp extends SimpleApplication {
     public void simpleInitApp() {
         GuiGlobals.initialize(this);
 
-        MainMenuController menuController = new MainMenuController();
+        MainMenuState menuState = new MainMenuState();
 
-        stateManager.attach(menuController);
+        stateManager.attach(menuState);
 
         BaseStyles.loadGlassStyle();
         GuiGlobals.getInstance().getStyles().setDefaultStyle("glass");
