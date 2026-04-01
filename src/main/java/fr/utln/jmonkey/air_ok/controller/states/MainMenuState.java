@@ -4,7 +4,11 @@ import com.jme3.app.Application;
 import com.jme3.app.SimpleApplication;
 import com.jme3.app.state.BaseAppState;
 
+import fr.utln.jmonkey.air_ok.controller.physics.PaddleController;
+import fr.utln.jmonkey.air_ok.model.GameAppState;
+import fr.utln.jmonkey.air_ok.model.GameState;
 import fr.utln.jmonkey.air_ok.model.MenuModel;
+import fr.utln.jmonkey.air_ok.model.Paddle;
 import fr.utln.jmonkey.air_ok.view.MainMenuView;
 
 public class MainMenuState extends BaseAppState {
@@ -32,7 +36,7 @@ public class MainMenuState extends BaseAppState {
 
     private void startOnePlayerGame() {
         getStateManager().detach(this);
-        getStateManager().attach(new EndScreenState());
+        getStateManager().attach(new GameAppState());
     }
 
     private void startTwoPlayerGame() {

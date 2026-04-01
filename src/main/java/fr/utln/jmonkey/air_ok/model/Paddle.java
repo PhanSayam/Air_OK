@@ -24,6 +24,7 @@ public class Paddle {
         private Node rootNode;
         private BulletAppState bulletAppState;
         private Geometry paddle_geo;
+        private RigidBodyControl paddle_phy;
 
 
         public Paddle(AssetManager assetManager, Node rootNode, BulletAppState bulletAppState) {
@@ -32,6 +33,10 @@ public class Paddle {
             this.bulletAppState = bulletAppState;
             this.position = new Vector3f(0, 0.2f, 12f);
         }
+
+    public Vector3f getPosition() {
+        return this.position;
+    }
 
     public void initPaddle() {
         Box paddleBox = new Box(radius, 0.2f, 0.5f);
@@ -45,8 +50,15 @@ public class Paddle {
 
         this.rootNode.attachChild(paddle_geo);
 
-        RigidBodyControl paddle_phy = new RigidBodyControl(0.0f);
+        paddle_phy = new RigidBodyControl(0.0f);
         paddle_geo.addControl(paddle_phy);
         bulletAppState.getPhysicsSpace().add(paddle_phy);
+    }
+
+
+    public void move(Vector3f newPos) {
+        this.position = newPos;
+        paddle_geo.setLocalTranslation(newPos);
+        paddle_phy.setPhysicsLocation(newPos);
     }
 }
