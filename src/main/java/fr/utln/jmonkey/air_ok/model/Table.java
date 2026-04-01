@@ -11,9 +11,6 @@ import com.jme3.asset.TextureKey;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.control.RigidBodyControl;
 
-
-
-
 public class Table {
 
     private float width = 20f;

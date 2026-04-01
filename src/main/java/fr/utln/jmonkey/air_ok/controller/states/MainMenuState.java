@@ -7,6 +7,8 @@ import com.jme3.app.state.BaseAppState;
 import fr.utln.jmonkey.air_ok.model.MenuModel;
 import fr.utln.jmonkey.air_ok.view.MainMenuView;
 
+import static fr.utln.jmonkey.air_ok.controller.states.GameMode.*;
+
 public class MainMenuState extends BaseAppState {
     private MainMenuView view;
     private MenuModel model;
@@ -32,17 +34,17 @@ public class MainMenuState extends BaseAppState {
 
     private void startOnePlayerGame() {
         getStateManager().detach(this);
-        getStateManager().attach(new EndScreenState());
+        getStateManager().attach(new GameState(SINGLE_PLAYER));
     }
 
     private void startTwoPlayerGame() {
         getStateManager().detach(this);
-        getStateManager().attach(new EndScreenState());
+        getStateManager().attach(new GameState(TWO_PLAYERS));
     }
 
     private void startTournament() {
         getStateManager().detach(this);
-        getStateManager().attach(new EndScreenState());
+        getStateManager().attach(new GameState(TOURNAMENT));
     }
 
     @Override

@@ -11,11 +11,7 @@ import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 
 
-
-import javax.swing.*;
-
 public class Paddle {
-
         private Vector3f position;
         private float radius = 1.0f;
         private float sizeMultiplier = 1.0f;
