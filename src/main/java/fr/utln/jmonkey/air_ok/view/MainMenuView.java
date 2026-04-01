@@ -11,9 +11,9 @@ public class MainMenuView {
     private Button tournamentButton;
     private Button quitButton;
 
-    public MainMenuView(String title) {
+    public MainMenuView() {
         mainContainer = new Container();
-        mainContainer.addChild(new Label(title));
+        mainContainer.addChild(new Label("Air OK"));
         onePlayerButton = mainContainer.addChild(new Button("1 Joueur"));
         twoPlayerButton = mainContainer.addChild(new Button("2 Joueurs"));
         tournamentButton = mainContainer.addChild(new Button("Tournoi"));

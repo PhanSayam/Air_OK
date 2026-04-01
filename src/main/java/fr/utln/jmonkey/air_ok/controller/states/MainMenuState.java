@@ -14,7 +14,7 @@ public class MainMenuState extends BaseAppState {
     @Override
     protected void initialize(Application app) {
         model = new MenuModel();
-        view = new MainMenuView(model.getGameTitle());
+        view = new MainMenuView();
 
         float screenWidth = app.getCamera().getWidth();
         float screenHeight = app.getCamera().getHeight();
