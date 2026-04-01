@@ -56,10 +56,38 @@
             <artifactId>jme3-jogg</artifactId>
             <version>${jme3_v}</version>
         </dependency>
+        <dependency>
+            <groupId>com.simsilica</groupId>
+            <artifactId>lemur</artifactId>
+            <version>1.16.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy-jsr223</artifactId>
+            <version>5.0.0</version>
+        </dependency>
+
     </dependencies>
+
 
     <build>
         <plugins>
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.1.1</version>
+            <configuration>
+                <executable>java</executable>
+                <arguments>
+                    <argument>-XstartOnFirstThread</argument> 
+                    
+                    <argument>-classpath</argument>
+                    <classpath/>
+                    
+                    <argument>fr.utln.jmonkey.air_ok.MainGameApp</argument> 
+                </arguments>
+            </configuration>
+        </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
