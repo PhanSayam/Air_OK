@@ -18,11 +18,6 @@ public class MainGameApp extends SimpleApplication {
     @Override
     public void simpleInitApp() {
         GuiGlobals.initialize(this);
-
-        MainMenuState menuState = new MainMenuState();
-
-        stateManager.attach(menuState);
-
         BaseStyles.loadGlassStyle();
         GuiGlobals.getInstance().getStyles().setDefaultStyle("glass");
 
@@ -39,6 +34,10 @@ public class MainGameApp extends SimpleApplication {
 
         // on affiche la souris
         inputManager.setCursorVisible(true);
+
+
+        MainMenuState menuState = new MainMenuState();
+        stateManager.attach(menuState);
 
     }
 }

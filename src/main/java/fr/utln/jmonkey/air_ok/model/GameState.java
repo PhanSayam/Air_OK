@@ -36,7 +36,6 @@ public class GameState extends SimpleApplication {
         PaddleController paddleControl = new PaddleController(paddle);
         stateManager.attach(paddleControl);
 
-
     }
 
 }

@@ -30,16 +30,20 @@ public class PaddleController extends BaseAppState {
     protected void initialize(Application app) {
         this.inputManager = app.getInputManager();
 
-        inputManager.addMapping("Left", new KeyTrigger(KeyInput.KEY_Q));
-        inputManager.addMapping("Right", new KeyTrigger(KeyInput.KEY_D));
+        inputManager.addMapping("Left", new KeyTrigger(KeyInput.KEY_LEFT));
+        inputManager.addMapping("Right", new KeyTrigger(KeyInput.KEY_RIGHT));
+        inputManager.addMapping("Up", new KeyTrigger(KeyInput.KEY_UP));
+        inputManager.addMapping("Down", new KeyTrigger(KeyInput.KEY_DOWN));
+        inputManager.addListener(analogListener, "Left", "Right", "Up", "Down");
 
-        inputManager.addListener(analogListener, "Left", "Right");
     }
 
     @Override
     protected void cleanup(Application application) {
         inputManager.deleteMapping("Left");
         inputManager.deleteMapping("Right");
+        inputManager.deleteMapping("Up");
+        inputManager.deleteMapping("Down");
         inputManager.removeListener(analogListener);
 
     }
@@ -60,12 +64,20 @@ public class PaddleController extends BaseAppState {
             float speed = 15f * tpf;
             Vector3f currentPos = paddle.getPosition();
 
-            if (name.equals("Right")) {
+            if (name.equals("Right") && currentPos.x < 7.9f) {
                 paddle.move(currentPos.add(speed, 0, 0));
             }
-            if (name.equals("Left")) {
+            if (name.equals("Left") && currentPos.x > -8f) {
                 paddle.move(currentPos.add(-speed, 0, 0));
+            }
+            if (name.equals("Down") && currentPos.z < 14.5f) {
+                paddle.move(currentPos.add(0, 0, speed));
+            }
+            if (name.equals("Up") && currentPos.z > 3f) {
+                paddle.move(currentPos.add(0, 0, -speed));
             }
         }
     };
+
+
 }

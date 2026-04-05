@@ -22,7 +22,7 @@ public class GameAppState extends BaseAppState {
         BulletAppState bullet = new BulletAppState();
         app.getStateManager().attach(bullet);
 
-        simpleApp.getCamera().setLocation(new Vector3f(0, 15f, 20f));
+        simpleApp.getCamera().setLocation(new Vector3f(0, 30f, 35f));
         simpleApp.getCamera().lookAt(Vector3f.ZERO, Vector3f.UNIT_Y);
 
         new Table(simpleApp.getAssetManager(), simpleApp.getRootNode(), bullet).initTable();
