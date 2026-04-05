@@ -15,6 +15,11 @@ public class GameAppState extends BaseAppState {
 
     private Paddle paddle;
 
+    private boolean twoPlayers;
+
+    public GameAppState(boolean twoPlayers) {
+        this.twoPlayers = twoPlayers;
+    }
     @Override
     protected void initialize(Application app) {
         SimpleApplication simpleApp = (SimpleApplication) app;
@@ -25,13 +30,20 @@ public class GameAppState extends BaseAppState {
         simpleApp.getCamera().setLocation(new Vector3f(0, 30f, 35f));
         simpleApp.getCamera().lookAt(Vector3f.ZERO, Vector3f.UNIT_Y);
 
-        new Table(simpleApp.getAssetManager(), simpleApp.getRootNode(), bullet).initTable();
-        new Puck(simpleApp.getAssetManager(), simpleApp.getRootNode(), bullet).initPuck();
+        Table table = new Table(simpleApp.getAssetManager(), simpleApp.getRootNode(), bullet);
+        table.initTable();
 
-        paddle = new Paddle(simpleApp.getAssetManager(), simpleApp.getRootNode(), bullet);
-        paddle.initPaddle();
+        Puck puck = new Puck(simpleApp.getAssetManager(), simpleApp.getRootNode(), bullet);
+        puck.initPuck();
 
-        app.getStateManager().attach(new PaddleController(paddle));
+        Paddle paddle1 = new Paddle(simpleApp.getAssetManager(), simpleApp.getRootNode(), bullet, new Vector3f(0, 0.2f, 12f));
+        paddle1.initPaddle();
+        app.getStateManager().attach(new PaddleController(paddle1,1));
+
+        if (twoPlayers) {
+        Paddle paddle2 = new Paddle(simpleApp.getAssetManager(), simpleApp.getRootNode(), bullet, new Vector3f(0, 0.2f, -12f));
+        paddle2.initPaddle();
+        app.getStateManager().attach(new PaddleController(paddle2, 2));}
 
     }
 

@@ -27,11 +27,11 @@ public class Paddle {
         private RigidBodyControl paddle_phy;
 
 
-        public Paddle(AssetManager assetManager, Node rootNode, BulletAppState bulletAppState) {
+        public Paddle(AssetManager assetManager, Node rootNode, BulletAppState bulletAppState, Vector3f startPosition) {
             this.assetManager = assetManager;
             this.rootNode = rootNode;
             this.bulletAppState = bulletAppState;
-            this.position = new Vector3f(0, 0.2f, 12f);
+            this.position = startPosition;
         }
 
     public Vector3f getPosition() {

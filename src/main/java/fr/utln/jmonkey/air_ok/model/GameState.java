@@ -30,11 +30,16 @@ public class GameState extends SimpleApplication {
         Puck puck = new Puck(assetManager, rootNode, bullet);
         puck.initPuck();
 
-        Paddle paddle = new Paddle(assetManager, rootNode, bullet);
+        Paddle paddle = new Paddle(assetManager, rootNode, bullet, new Vector3f(0, 0.2f, 12f));
         paddle.initPaddle();
 
-        PaddleController paddleControl = new PaddleController(paddle);
+        PaddleController paddleControl = new PaddleController(paddle,1);
         stateManager.attach(paddleControl);
+
+        Paddle paddle2 = new Paddle(assetManager, rootNode, bullet, new Vector3f(0, 0.2f, -12f));
+        paddle2.initPaddle();
+        PaddleController paddleControl2 = new PaddleController(paddle2, 2);
+        stateManager.attach(paddleControl2);
 
     }
 

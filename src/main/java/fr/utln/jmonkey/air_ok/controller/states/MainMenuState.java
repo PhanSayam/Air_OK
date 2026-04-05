@@ -36,12 +36,13 @@ public class MainMenuState extends BaseAppState {
 
     private void startOnePlayerGame() {
         getStateManager().detach(this);
-        getStateManager().attach(new GameAppState());
+        getStateManager().attach(new GameAppState(false));
     }
 
     private void startTwoPlayerGame() {
         getStateManager().detach(this);
-        getStateManager().attach(new EndScreenState());
+        getStateManager().attach(new GameAppState(true)); //2 player
+        //getStateManager().attach(new EndScreenState());
     }
 
     private void startTournament() {

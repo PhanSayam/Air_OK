@@ -17,33 +17,46 @@ public class PaddleController extends BaseAppState {
 
     private Paddle paddle;
     private InputManager inputManager;
+    private int playerId;
 
-    public PaddleController(Paddle paddle) {
+    public PaddleController(Paddle paddle, int playerId) {
         this.paddle = paddle;
+        this.playerId = playerId;
     }
-
-
-
 
 
     @Override
     protected void initialize(Application app) {
         this.inputManager = app.getInputManager();
 
-        inputManager.addMapping("Left", new KeyTrigger(KeyInput.KEY_LEFT));
-        inputManager.addMapping("Right", new KeyTrigger(KeyInput.KEY_RIGHT));
-        inputManager.addMapping("Up", new KeyTrigger(KeyInput.KEY_UP));
-        inputManager.addMapping("Down", new KeyTrigger(KeyInput.KEY_DOWN));
-        inputManager.addListener(analogListener, "Left", "Right", "Up", "Down");
+        if (playerId == 1) {
+            inputManager.addMapping(playerId + "Left", new KeyTrigger(KeyInput.KEY_LEFT));
+            inputManager.addMapping(playerId + "Right", new KeyTrigger(KeyInput.KEY_RIGHT));
+            inputManager.addMapping(playerId + "Up", new KeyTrigger(KeyInput.KEY_UP));
+            inputManager.addMapping(playerId + "Down", new KeyTrigger(KeyInput.KEY_DOWN));
+            inputManager.addListener(analogListener, "Left", "Right", "Up", "Down");
+        }
+        else {
+            inputManager.addMapping(playerId + "Left",  new KeyTrigger(KeyInput.KEY_J));
+            inputManager.addMapping(playerId + "Right", new KeyTrigger(KeyInput.KEY_L));
+            inputManager.addMapping(playerId + "Up",    new KeyTrigger(KeyInput.KEY_I));
+            inputManager.addMapping(playerId + "Down",  new KeyTrigger(KeyInput.KEY_K));
+        }
 
+        inputManager.addListener(analogListener,
+                playerId + "Left",
+                playerId + "Right",
+                playerId + "Up",
+                playerId + "Down");
     }
 
     @Override
     protected void cleanup(Application application) {
-        inputManager.deleteMapping("Left");
-        inputManager.deleteMapping("Right");
-        inputManager.deleteMapping("Up");
-        inputManager.deleteMapping("Down");
+
+        inputManager.deleteMapping(playerId + "Left");
+        inputManager.deleteMapping(playerId + "Right");
+        inputManager.deleteMapping(playerId + "Up");
+        inputManager.deleteMapping(playerId + "Down");
         inputManager.removeListener(analogListener);
 
     }
@@ -64,16 +77,27 @@ public class PaddleController extends BaseAppState {
             float speed = 15f * tpf;
             Vector3f currentPos = paddle.getPosition();
 
-            if (name.equals("Right") && currentPos.x < 7.9f) {
+            float minZ;
+            float maxZ;
+
+            if (playerId == 1) {
+                minZ = 3f;
+                maxZ = 14.5f;
+            } else {
+                minZ = -14.5f;
+                maxZ = -3f;
+            }
+
+            if (name.equals(playerId + "Right") && currentPos.x < 7.9f) {
                 paddle.move(currentPos.add(speed, 0, 0));
             }
-            if (name.equals("Left") && currentPos.x > -8f) {
+            if (name.equals(playerId + "Left") && currentPos.x > -8f) {
                 paddle.move(currentPos.add(-speed, 0, 0));
             }
-            if (name.equals("Down") && currentPos.z < 14.5f) {
+            if (name.equals(playerId + "Down") && currentPos.z < maxZ) {
                 paddle.move(currentPos.add(0, 0, speed));
             }
-            if (name.equals("Up") && currentPos.z > 3f) {
+            if (name.equals(playerId + "Up") && currentPos.z > minZ) {
                 paddle.move(currentPos.add(0, 0, -speed));
             }
         }
