@@ -37,10 +37,10 @@ public class PaddleController extends BaseAppState {
             inputManager.addListener(analogListener, "Left", "Right", "Up", "Down");
         }
         else {
-            inputManager.addMapping(playerId + "Left",  new KeyTrigger(KeyInput.KEY_J));
-            inputManager.addMapping(playerId + "Right", new KeyTrigger(KeyInput.KEY_L));
-            inputManager.addMapping(playerId + "Up",    new KeyTrigger(KeyInput.KEY_I));
-            inputManager.addMapping(playerId + "Down",  new KeyTrigger(KeyInput.KEY_K));
+            inputManager.addMapping(playerId + "Left",  new KeyTrigger(KeyInput.KEY_A));
+            inputManager.addMapping(playerId + "Right", new KeyTrigger(KeyInput.KEY_D));
+            inputManager.addMapping(playerId + "Up",    new KeyTrigger(KeyInput.KEY_W));
+            inputManager.addMapping(playerId + "Down",  new KeyTrigger(KeyInput.KEY_S));
         }
 
         inputManager.addListener(analogListener,
