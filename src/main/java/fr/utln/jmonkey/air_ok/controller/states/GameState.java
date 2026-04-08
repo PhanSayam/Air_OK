@@ -35,11 +35,17 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
     private static final float GOAL_MARGIN = 0.6f;
     private static final float PADDLE_SPEED = 14f;
     private static final float AI_PADDLE_SPEED = 11.5f;
+    private static final float AI_REACTION_DELAY_AFTER_SERVE_SECONDS = 0.45f;
     private static final float TABLE_PLANE_Y = Puck.HALF_HEIGHT;
+    private static final float CENTER_NEUTRAL_HALF_DEPTH = 2.2f;
+    private static final float PLAYER_ONE_START_Z = 12f;
+    private static final float PLAYER_TWO_START_Z = -12f;
     private static final float AI_DEFENSIVE_LINE_Z = -10.5f;
     private static final float AI_INTERCEPT_LINE_Z = -7.2f;
     private static final float AI_ATTACK_OFFSET = 1.35f;
-    private static final float SERVE_LINE_Z = 8.5f;
+    private static final float SERVE_SAFE_PADDING = 0.25f;
+    private static final float GOAL_DETECTION_COOLDOWN_SECONDS = 0.75f;
+    private static final float SERVE_ARM_DISTANCE = 1.2f;
     private static final float STUCK_SPEED_THRESHOLD = 0.18f;
     private static final float STUCK_TIME_THRESHOLD_SECONDS = 2.2f;
     private static final float SMASH_MIN_SPEED = 8.5f;
@@ -102,6 +108,9 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
     private Vector3f playerTwoPaddleVelocity = Vector3f.ZERO;
     private Vector3f aiPaddleVelocity = Vector3f.ZERO;
     private float shotDebugTimerSeconds;
+    private float goalDetectionCooldownSeconds;
+    private float aiServeDelaySeconds;
+    private Vector3f lastServePosition = Vector3f.ZERO;
 
     public GameState() {
         this(GameMode.SINGLE_PLAYER);
@@ -131,18 +140,18 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         puck.initPuck();
 
         playerOnePaddle = new Paddle(simpleApp.getAssetManager(), gameNode, bulletAppState,
-                new Vector3f(0f, TABLE_PLANE_Y, 12f), ColorRGBA.Cyan);
+                new Vector3f(0f, TABLE_PLANE_Y, PLAYER_ONE_START_Z), ColorRGBA.Cyan);
         playerOnePaddle.initPaddle();
         configureHumanPaddleCollisions();
 
         if (gameMode == GameMode.SINGLE_PLAYER) {
             aiPaddle = new Paddle(simpleApp.getAssetManager(), gameNode, bulletAppState,
-                    new Vector3f(0f, TABLE_PLANE_Y, -12f), ColorRGBA.Orange);
+                    new Vector3f(0f, TABLE_PLANE_Y, PLAYER_TWO_START_Z), ColorRGBA.Orange);
             aiPaddle.initPaddle();
             configureAIPaddleCollisions();
         } else {
             playerTwoPaddle = new Paddle(simpleApp.getAssetManager(), gameNode, bulletAppState,
-                    new Vector3f(0f, TABLE_PLANE_Y, -12f), ColorRGBA.Green);
+                    new Vector3f(0f, TABLE_PLANE_Y, PLAYER_TWO_START_Z), ColorRGBA.Green);
             playerTwoPaddle.initPaddle();
             configurePlayerTwoPaddleCollisions();
         }
@@ -271,19 +280,105 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         lastTouchSide = Side.NONE;
         rallyInProgress = false;
         stuckTimerSeconds = 0f;
+        playerOnePaddleVelocity = Vector3f.ZERO;
+        playerTwoPaddleVelocity = Vector3f.ZERO;
+        aiPaddleVelocity = Vector3f.ZERO;
 
-        float serveZ = (serverSide == Side.PLAYER_ONE) ? SERVE_LINE_Z : -SERVE_LINE_Z;
-        Paddle serverPaddle = getPaddleForSide(serverSide);
+        resetPaddlesToStartPositions();
+
         float serveX = 0f;
-        if (serverPaddle != null) {
-            serveX = serverPaddle.getPosition().x;
-        }
+        // Respawn points are aligned with the center neutral-zone boundary on each
+        // side.
+        float serveZ = (serverSide == Side.PLAYER_ONE) ? CENTER_NEUTRAL_HALF_DEPTH : -CENTER_NEUTRAL_HALF_DEPTH;
 
         float halfWidth = table.getWidth() / 2f;
         float maxX = halfWidth - puck.getRadius();
         serveX = Math.max(-maxX, Math.min(maxX, serveX));
 
-        puck.resetPosition(new Vector3f(serveX, TABLE_PLANE_Y, serveZ));
+        Vector3f servePosition = computeSafeServePosition(new Vector3f(serveX, TABLE_PLANE_Y, serveZ), serverSide);
+        puck.resetPosition(servePosition);
+        lastServePosition = servePosition.clone();
+        goalDetectionCooldownSeconds = GOAL_DETECTION_COOLDOWN_SECONDS;
+        aiServeDelaySeconds = (gameMode == GameMode.SINGLE_PLAYER) ? AI_REACTION_DELAY_AFTER_SERVE_SECONDS : 0f;
+    }
+
+    private void resetPaddlesToStartPositions() {
+        if (playerOnePaddle != null) {
+            playerOnePaddle.setPosition(new Vector3f(0f, TABLE_PLANE_Y, PLAYER_ONE_START_Z));
+        }
+
+        if (gameMode == GameMode.TWO_PLAYER) {
+            if (playerTwoPaddle != null) {
+                playerTwoPaddle.setPosition(new Vector3f(0f, TABLE_PLANE_Y, PLAYER_TWO_START_Z));
+            }
+        } else if (aiPaddle != null) {
+            aiPaddle.setPosition(new Vector3f(0f, TABLE_PLANE_Y, PLAYER_TWO_START_Z));
+        }
+    }
+
+    private Vector3f computeSafeServePosition(Vector3f desiredServePosition, Side serverSide) {
+        Vector3f safe = desiredServePosition.clone();
+        Paddle serverPaddle = getPaddleForSide(serverSide);
+        Paddle otherPaddle = getPaddleForSide(oppositeSide(serverSide));
+
+        // Iterate a few times because resolving one overlap can create another.
+        for (int i = 0; i < 4; i++) {
+            safe = pushServeAwayFromPaddle(safe, serverPaddle, serverSide);
+            safe = pushServeAwayFromPaddle(safe, otherPaddle, serverSide);
+        }
+
+        return clampServeToValidArea(safe, serverSide);
+    }
+
+    private Vector3f pushServeAwayFromPaddle(Vector3f servePosition, Paddle paddle, Side serverSide) {
+        if (paddle == null) {
+            return servePosition;
+        }
+
+        Vector3f paddlePos = paddle.getPosition();
+        float minDistance = puck.getRadius() + paddle.getRadius() + SERVE_SAFE_PADDING;
+
+        float dx = servePosition.x - paddlePos.x;
+        float dz = servePosition.z - paddlePos.z;
+        float distSq = dx * dx + dz * dz;
+        if (distSq >= minDistance * minDistance) {
+            return servePosition;
+        }
+
+        float dist = (float) Math.sqrt(distSq);
+        float pushDistance = (minDistance - dist) + 0.02f;
+
+        Vector3f pushDir;
+        if (dist > 0.0001f) {
+            pushDir = new Vector3f(dx / dist, 0f, dz / dist);
+        } else {
+            // If perfectly overlapping, nudge toward table center from serving side.
+            float centerDirection = (serverSide == Side.PLAYER_ONE) ? -1f : 1f;
+            pushDir = new Vector3f(0f, 0f, centerDirection);
+        }
+
+        Vector3f adjusted = servePosition.add(pushDir.mult(pushDistance));
+        return clampServeToValidArea(adjusted, serverSide);
+    }
+
+    private Vector3f clampServeToValidArea(Vector3f position, Side serverSide) {
+        float halfWidth = table.getWidth() / 2f;
+        float halfLength = table.getLength() / 2f;
+        float maxX = halfWidth - puck.getRadius();
+
+        float minZ;
+        float maxZ;
+        if (serverSide == Side.PLAYER_ONE) {
+            minZ = CENTER_NEUTRAL_HALF_DEPTH;
+            maxZ = halfLength - puck.getRadius();
+        } else {
+            minZ = -halfLength + puck.getRadius();
+            maxZ = -CENTER_NEUTRAL_HALF_DEPTH;
+        }
+
+        float clampedX = Math.max(-maxX, Math.min(maxX, position.x));
+        float clampedZ = Math.max(minZ, Math.min(maxZ, position.z));
+        return new Vector3f(clampedX, TABLE_PLANE_Y, clampedZ);
     }
 
     private void updateScoreText() {
@@ -291,7 +386,17 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
     }
 
     private void checkGoals() {
+        if (goalDetectionCooldownSeconds > 0f) {
+            return;
+        }
+
         Vector3f puckPosition = puck.getPosition();
+
+        // Ignore goal checks while the puck is still around the fresh serve point.
+        if (puckPosition.distanceSquared(lastServePosition) < SERVE_ARM_DISTANCE * SERVE_ARM_DISTANCE) {
+            return;
+        }
+
         float halfLength = table.getLength() / 2f;
         float goalHalfWidth = table.getGoalWidth() / 2f;
 
@@ -426,11 +531,23 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
             }
         }
 
+        if (goalDetectionCooldownSeconds > 0f) {
+            goalDetectionCooldownSeconds = Math.max(0f, goalDetectionCooldownSeconds - tpf);
+        }
+
+        if (aiServeDelaySeconds > 0f) {
+            aiServeDelaySeconds = Math.max(0f, aiServeDelaySeconds - tpf);
+        }
+
         updatePlayerOnePaddlePosition(tpf);
         if (gameMode == GameMode.TWO_PLAYER) {
             updatePlayerTwoPaddlePosition(tpf);
         } else {
-            updateAIPaddlePosition(tpf);
+            if (aiServeDelaySeconds <= 0f) {
+                updateAIPaddlePosition(tpf);
+            } else {
+                aiPaddleVelocity = Vector3f.ZERO;
+            }
         }
         playerOnePaddle.constrainToTablePlane(TABLE_PLANE_Y);
         if (playerTwoPaddle != null) {
@@ -493,9 +610,10 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         float halfWidth = table.getWidth() / 2f;
         float halfLength = table.getLength() / 2f;
         float radius = playerOnePaddle.getRadius();
+        float centerLimit = CENTER_NEUTRAL_HALF_DEPTH + radius;
 
         float tableX = Math.max(-(halfWidth - radius), Math.min(halfWidth - radius, currentPos.x + deltaX));
-        float tableZ = Math.max(radius, Math.min(halfLength - radius, currentPos.z + deltaZ));
+        float tableZ = Math.max(centerLimit, Math.min(halfLength - radius, currentPos.z + deltaZ));
 
         Vector3f newPosition = new Vector3f(tableX, currentPos.y, tableZ);
         playerOnePaddleVelocity = newPosition.subtract(currentPos).mult(1f / safeTpf);
@@ -530,9 +648,10 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         float halfWidth = table.getWidth() / 2f;
         float halfLength = table.getLength() / 2f;
         float radius = playerTwoPaddle.getRadius();
+        float centerLimit = CENTER_NEUTRAL_HALF_DEPTH + radius;
 
         float tableX = Math.max(-(halfWidth - radius), Math.min(halfWidth - radius, currentPos.x + deltaX));
-        float tableZ = Math.max(-(halfLength - radius), Math.min(-radius, currentPos.z + deltaZ));
+        float tableZ = Math.max(-(halfLength - radius), Math.min(-centerLimit, currentPos.z + deltaZ));
 
         Vector3f newPosition = new Vector3f(tableX, currentPos.y, tableZ);
         playerTwoPaddleVelocity = newPosition.subtract(currentPos).mult(1f / safeTpf);
@@ -591,9 +710,10 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
 
         float halfWidth = table.getWidth() / 2f;
         float radius = aiPaddle.getRadius();
+        float centerLimit = CENTER_NEUTRAL_HALF_DEPTH + radius;
 
         nextX = Math.max(-(halfWidth - radius), Math.min(halfWidth - radius, nextX));
-        nextZ = Math.max(-(halfLength - radius), Math.min(-radius, nextZ));
+        nextZ = Math.max(-(halfLength - radius), Math.min(-centerLimit, nextZ));
 
         Vector3f newPosition = new Vector3f(nextX, TABLE_PLANE_Y, nextZ);
         aiPaddleVelocity = newPosition.subtract(aiPos).mult(1f / safeTpf);
