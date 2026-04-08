@@ -15,6 +15,8 @@ import com.jme3.scene.shape.Cylinder;
 public class Paddle {
 
     public static final float HALF_HEIGHT = 0.25f;
+    /** Collision shape is taller than the visual to prevent puck from tipping over paddle. */
+    private static final float COLLISION_HALF_HEIGHT = 1.25f;
 
     private Vector3f position;
     private float radius = 1.0f;
@@ -23,6 +25,7 @@ public class Paddle {
     private AssetManager assetManager;
     private Node rootNode;
     private BulletAppState bulletAppState;
+    private Node paddleNode;
     private Geometry paddle_geo;
     private RigidBodyControl paddlePhysics;
 
@@ -40,6 +43,8 @@ public class Paddle {
     }
 
     public void initPaddle() {
+        paddleNode = new Node("PaddleNode");
+
         Cylinder paddleMesh = new Cylinder(2, 40, radius, HALF_HEIGHT * 2f, true);
         paddle_geo = new Geometry("Paddle", paddleMesh);
 
@@ -47,15 +52,19 @@ public class Paddle {
         paddle_mat.setColor("Color", color);
         paddle_geo.setMaterial(paddle_mat);
         // Same orientation as puck: thickness on Y axis.
+        // We rotate the visual mesh, not the physics node.
         paddle_geo.rotate(FastMath.HALF_PI, 0f, 0f);
 
-        paddle_geo.setLocalTranslation(position);
+        paddleNode.attachChild(paddle_geo);
+        paddleNode.setLocalTranslation(position);
 
-        this.rootNode.attachChild(paddle_geo);
+        this.rootNode.attachChild(paddleNode);
 
-        CylinderCollisionShape paddleShape = new CylinderCollisionShape(new Vector3f(radius, HALF_HEIGHT, radius));
+        // Collision shape is taller than the visual to prevent puck tipping.
+        // Axis 1 means the cylinder's height is along the Y axis.
+        CylinderCollisionShape paddleShape = new CylinderCollisionShape(new Vector3f(radius, COLLISION_HALF_HEIGHT, radius), 1);
         paddlePhysics = new RigidBodyControl(paddleShape, 20.0f);
-        paddle_geo.addControl(paddlePhysics);
+        paddleNode.addControl(paddlePhysics);
         bulletAppState.getPhysicsSpace().add(paddlePhysics);
         paddlePhysics.setKinematic(true);
         paddlePhysics.setGravity(Vector3f.ZERO);
@@ -69,7 +78,7 @@ public class Paddle {
 
     public void setPosition(Vector3f newPosition) {
         position = new Vector3f(newPosition.x, HALF_HEIGHT, newPosition.z);
-        paddle_geo.setLocalTranslation(position);
+        paddleNode.setLocalTranslation(position);
         paddlePhysics.setPhysicsLocation(position);
         paddlePhysics.activate();
     }

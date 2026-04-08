@@ -3,12 +3,14 @@ package fr.utln.jmonkey.air_ok.model;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 import com.jme3.texture.Texture;
 import com.jme3.asset.TextureKey;
 import com.jme3.bullet.BulletAppState;
+import com.jme3.bullet.collision.shapes.BoxCollisionShape;
 import com.jme3.bullet.control.RigidBodyControl;
 
 public class Table {
@@ -16,6 +18,8 @@ public class Table {
     private static final float WIDTH = 20f;
     private static final float LENGTH = 30f;
     private static final float GOAL_WIDTH = 6f;
+    /** Collision shapes for borders are much taller than their visuals to prevent puck tipping. */
+    private static final float COLLISION_BORDER_HALF_HEIGHT = 2.5f;
 
     private AssetManager assetManager;
     private Node rootNode;
@@ -61,7 +65,9 @@ public class Table {
         Lborder_geo.setLocalTranslation(-10f, 0.4f, 0);
         this.rootNode.attachChild(Lborder_geo);
 
-        RigidBodyControl leftBorderPhysics = new RigidBodyControl(0.0f);
+        // Collision shape is taller than the visual border to prevent puck from tipping.
+        BoxCollisionShape leftBorderShape = new BoxCollisionShape(new Vector3f(1f, COLLISION_BORDER_HALF_HEIGHT, LENGTH / 2));
+        RigidBodyControl leftBorderPhysics = new RigidBodyControl(leftBorderShape, 0.0f);
         Lborder_geo.addControl(leftBorderPhysics);
         bulletAppState.getPhysicsSpace().add(leftBorderPhysics);
         leftBorderPhysics.setRestitution(1.0f);
@@ -72,7 +78,9 @@ public class Table {
         Rborder_geo.setLocalTranslation(10f, 0.4f, 0f);
         this.rootNode.attachChild(Rborder_geo);
 
-        RigidBodyControl rightBorderPhysics = new RigidBodyControl(0.0f);
+        // Collision shape is taller than the visual border to prevent puck from tipping.
+        BoxCollisionShape rightBorderShape = new BoxCollisionShape(new Vector3f(1f, COLLISION_BORDER_HALF_HEIGHT, LENGTH / 2));
+        RigidBodyControl rightBorderPhysics = new RigidBodyControl(rightBorderShape, 0.0f);
         Rborder_geo.addControl(rightBorderPhysics);
         bulletAppState.getPhysicsSpace().add(rightBorderPhysics);
         rightBorderPhysics.setRestitution(1.0f);
@@ -118,7 +126,10 @@ public class Table {
         borderGeo.setLocalTranslation(x, y, z);
         rootNode.attachChild(borderGeo);
 
-        RigidBodyControl borderPhysics = new RigidBodyControl(0.0f);
+        // Use a taller collision shape than the visual box to prevent puck from tipping.
+        Vector3f halfExtents = new Vector3f(box.getXExtent(), COLLISION_BORDER_HALF_HEIGHT, box.getZExtent());
+        BoxCollisionShape borderShape = new BoxCollisionShape(halfExtents);
+        RigidBodyControl borderPhysics = new RigidBodyControl(borderShape, 0.0f);
         borderGeo.addControl(borderPhysics);
         bulletAppState.getPhysicsSpace().add(borderPhysics);
         borderPhysics.setRestitution(1.0f);

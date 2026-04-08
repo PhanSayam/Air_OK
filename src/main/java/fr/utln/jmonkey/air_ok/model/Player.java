@@ -22,6 +22,10 @@ public class Player {
         score++;
     }
 
+    public void removePoint() {
+        score = Math.max(0, score - 1);
+    }
+
     public void resetScore() {
         score = 0;
     }

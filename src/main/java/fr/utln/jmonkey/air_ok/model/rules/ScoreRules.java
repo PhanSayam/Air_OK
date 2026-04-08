@@ -4,7 +4,7 @@ import fr.utln.jmonkey.air_ok.model.Player;
 
 public final class ScoreRules {
 
-    private static final int WINNING_SCORE = 7;
+    private static final int WINNING_SCORE = 12;
 
     private ScoreRules() {
     }
