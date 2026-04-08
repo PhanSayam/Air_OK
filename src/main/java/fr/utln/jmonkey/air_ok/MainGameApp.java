@@ -1,6 +1,7 @@
 package fr.utln.jmonkey.air_ok;
 
 import com.jme3.app.SimpleApplication;
+import com.jme3.system.AppSettings;
 import com.simsilica.lemur.GuiGlobals;
 import com.simsilica.lemur.style.BaseStyles;
 
@@ -10,6 +11,11 @@ public class MainGameApp extends SimpleApplication {
 
     public static void main(String[] args) {
         MainGameApp app = new MainGameApp();
+        AppSettings settings = new AppSettings(true);
+        settings.setResolution(1920, 1080);
+        settings.setResizable(true);
+        app.setSettings(settings);
+        app.setShowSettings(false);
         app.start();
     }
 

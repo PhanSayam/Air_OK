@@ -4,16 +4,13 @@ import com.jme3.app.Application;
 import com.jme3.app.SimpleApplication;
 import com.jme3.app.state.BaseAppState;
 
-import fr.utln.jmonkey.air_ok.model.MenuModel;
 import fr.utln.jmonkey.air_ok.view.MainMenuView;
 
 public class MainMenuState extends BaseAppState {
     private MainMenuView view;
-    private MenuModel model;
 
     @Override
     protected void initialize(Application app) {
-        model = new MenuModel();
         view = new MainMenuView();
 
         float screenWidth = app.getCamera().getWidth();
@@ -32,12 +29,13 @@ public class MainMenuState extends BaseAppState {
 
     private void startOnePlayerGame() {
         getStateManager().detach(this);
-        getStateManager().attach(new EndScreenState());
+        getStateManager().attach(new GameState(GameState.GameMode.SINGLE_PLAYER));
     }
 
     private void startTwoPlayerGame() {
         getStateManager().detach(this);
-        getStateManager().attach(new EndScreenState());
+        BaseAppState game = new GameState(GameState.GameMode.TWO_PLAYER);
+        getStateManager().attach(game);
     }
 
     private void startTournament() {

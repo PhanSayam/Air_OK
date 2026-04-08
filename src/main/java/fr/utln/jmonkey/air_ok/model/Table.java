@@ -11,14 +11,11 @@ import com.jme3.asset.TextureKey;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.control.RigidBodyControl;
 
-
-
-
 public class Table {
 
-    private float width = 20f;
-    private float length = 30f;
-    private float neutralZoneRatio = 0.2f;
+    private static final float WIDTH = 20f;
+    private static final float LENGTH = 30f;
+    private static final float GOAL_WIDTH = 6f;
 
     private AssetManager assetManager;
     private Node rootNode;
@@ -34,17 +31,18 @@ public class Table {
     public void initTable() {
 
         Material table_mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        //Texture tex = assetManager.loadTexture("Textures/Terrain/Pond/Pond.jpg");
-        //tex.setWrap(Texture.WrapMode.Repeat);
-        //table_mat.setTexture("ColorMap", tex);
+        // Texture tex = assetManager.loadTexture("Textures/Terrain/Pond/Pond.jpg");
+        // tex.setWrap(Texture.WrapMode.Repeat);
+        // table_mat.setTexture("ColorMap", tex);
         table_mat.setColor("Color", ColorRGBA.DarkGray);
 
         border_mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        //Texture tex = assetManager.loadTexture("Textures/Terrain/BrickWall/BrickWall.jpg");
-        //border_mat.setTexture("ColorMap", tex);
+        // Texture tex =
+        // assetManager.loadTexture("Textures/Terrain/BrickWall/BrickWall.jpg");
+        // border_mat.setTexture("ColorMap", tex);
         border_mat.setColor("Color", ColorRGBA.Blue);
 
-        Box box = new Box(width/2, 0.1f, length/2);
+        Box box = new Box(WIDTH / 2, 0.1f, LENGTH / 2);
         Geometry table_geo = new Geometry("Box", box);
         table_geo.setLocalTranslation(0, -0.1f, 0);
         table_geo.setMaterial(table_mat);
@@ -53,17 +51,89 @@ public class Table {
         RigidBodyControl table_phy = new RigidBodyControl(0.0f);
         table_geo.addControl(table_phy);
         bulletAppState.getPhysicsSpace().add(table_phy);
+        table_phy.setRestitution(1.0f);
+        table_phy.setFriction(0f);
 
-        Box long_border = new Box(1f, 0.5f, 15f);
+        Box long_border = new Box(1f, 0.5f, LENGTH / 2);
 
         Geometry Lborder_geo = new Geometry("leftBorder", long_border);
         Lborder_geo.setMaterial(border_mat);
         Lborder_geo.setLocalTranslation(-10f, 0.4f, 0);
         this.rootNode.attachChild(Lborder_geo);
 
+        RigidBodyControl leftBorderPhysics = new RigidBodyControl(0.0f);
+        Lborder_geo.addControl(leftBorderPhysics);
+        bulletAppState.getPhysicsSpace().add(leftBorderPhysics);
+        leftBorderPhysics.setRestitution(1.0f);
+        leftBorderPhysics.setFriction(0f);
+
         Geometry Rborder_geo = new Geometry("rightBorder", long_border);
         Rborder_geo.setMaterial(border_mat);
         Rborder_geo.setLocalTranslation(10f, 0.4f, 0f);
         this.rootNode.attachChild(Rborder_geo);
+
+        RigidBodyControl rightBorderPhysics = new RigidBodyControl(0.0f);
+        Rborder_geo.addControl(rightBorderPhysics);
+        bulletAppState.getPhysicsSpace().add(rightBorderPhysics);
+        rightBorderPhysics.setRestitution(1.0f);
+        rightBorderPhysics.setFriction(0f);
+
+        addGoalBordersAndFrames();
+    }
+
+    private void addGoalBordersAndFrames() {
+        float endBorderThickness = 1f;
+        float borderHeight = 0.5f;
+        float playableHalfWidth = WIDTH / 2f;
+        float playableHalfLength = LENGTH / 2f;
+        float sideSegmentHalf = (WIDTH - GOAL_WIDTH) / 4f;
+        float sideSegmentOffset = GOAL_WIDTH / 2f + sideSegmentHalf;
+
+        Box sideSegment = new Box(sideSegmentHalf, borderHeight, endBorderThickness);
+
+        createStaticBorder("topLeftSegment", sideSegment, -sideSegmentOffset, 0.4f, playableHalfLength);
+        createStaticBorder("topRightSegment", sideSegment, sideSegmentOffset, 0.4f, playableHalfLength);
+        createStaticBorder("bottomLeftSegment", sideSegment, -sideSegmentOffset, 0.4f, -playableHalfLength);
+        createStaticBorder("bottomRightSegment", sideSegment, sideSegmentOffset, 0.4f, -playableHalfLength);
+
+        Material goalFrameMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+        goalFrameMat.setColor("Color", ColorRGBA.White);
+
+        Box topCrossbar = new Box(GOAL_WIDTH / 2f, 0.2f, 0.1f);
+        Geometry topGoalGeo = new Geometry("topGoalFrame", topCrossbar);
+        topGoalGeo.setMaterial(goalFrameMat);
+        topGoalGeo.setLocalTranslation(0, 0.4f, playableHalfLength + 0.2f);
+        rootNode.attachChild(topGoalGeo);
+
+        Box bottomCrossbar = new Box(GOAL_WIDTH / 2f, 0.2f, 0.1f);
+        Geometry bottomGoalGeo = new Geometry("bottomGoalFrame", bottomCrossbar);
+        bottomGoalGeo.setMaterial(goalFrameMat);
+        bottomGoalGeo.setLocalTranslation(0, 0.4f, -playableHalfLength - 0.2f);
+        rootNode.attachChild(bottomGoalGeo);
+    }
+
+    private void createStaticBorder(String name, Box box, float x, float y, float z) {
+        Geometry borderGeo = new Geometry(name, box);
+        borderGeo.setMaterial(border_mat);
+        borderGeo.setLocalTranslation(x, y, z);
+        rootNode.attachChild(borderGeo);
+
+        RigidBodyControl borderPhysics = new RigidBodyControl(0.0f);
+        borderGeo.addControl(borderPhysics);
+        bulletAppState.getPhysicsSpace().add(borderPhysics);
+        borderPhysics.setRestitution(1.0f);
+        borderPhysics.setFriction(0f);
+    }
+
+    public float getWidth() {
+        return WIDTH;
+    }
+
+    public float getLength() {
+        return LENGTH;
+    }
+
+    public float getGoalWidth() {
+        return GOAL_WIDTH;
     }
 }

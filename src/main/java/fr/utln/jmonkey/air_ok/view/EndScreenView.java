@@ -33,4 +33,8 @@ public class EndScreenView {
     public Label getScoresLabel() {
         return scoresLabel;
     }
+
+    public void setScoresText(String text) {
+        scoresLabel.setText(text);
+    }
 }

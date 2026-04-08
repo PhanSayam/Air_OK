@@ -77,14 +77,13 @@
             <artifactId>exec-maven-plugin</artifactId>
             <version>3.1.1</version>
             <configuration>
-                <executable>java</executable>
+                <mainClass>fr.utln.jmonkey.air_ok.MainGameApp</mainClass>
+                <executable>${java.home}/bin/java</executable>
                 <arguments>
-                    <argument>-XstartOnFirstThread</argument> 
-                    
-                    <argument>-classpath</argument>
+                    <argument>-XstartOnFirstThread</argument>
+                    <argument>-cp</argument>
                     <classpath/>
-                    
-                    <argument>fr.utln.jmonkey.air_ok.MainGameApp</argument> 
+                    <argument>fr.utln.jmonkey.air_ok.MainGameApp</argument>
                 </arguments>
             </configuration>
         </plugin>

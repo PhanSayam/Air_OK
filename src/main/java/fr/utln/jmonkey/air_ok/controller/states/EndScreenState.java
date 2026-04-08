@@ -3,6 +3,7 @@ package fr.utln.jmonkey.air_ok.controller.states;
 import com.jme3.app.Application;
 import com.jme3.app.SimpleApplication;
 import com.jme3.app.state.BaseAppState;
+import com.jme3.math.ColorRGBA;
 
 import fr.utln.jmonkey.air_ok.model.MenuModel;
 import fr.utln.jmonkey.air_ok.view.EndScreenView;
@@ -10,11 +11,25 @@ import fr.utln.jmonkey.air_ok.view.EndScreenView;
 public class EndScreenState extends BaseAppState {
     private EndScreenView view;
     private MenuModel model;
+    private final String resultText;
+    private ColorRGBA previousBackgroundColor;
+
+    public EndScreenState() {
+        this(null);
+    }
+
+    public EndScreenState(String resultText) {
+        this.resultText = resultText;
+    }
 
     @Override
     protected void initialize(Application app) {
         model = new MenuModel();
         view = new EndScreenView();
+
+        if (resultText != null && !resultText.isBlank()) {
+            view.setScoresText(resultText);
+        }
 
         float screenWidth = app.getCamera().getWidth();
         float screenHeight = app.getCamera().getHeight();
@@ -35,11 +50,18 @@ public class EndScreenState extends BaseAppState {
 
     @Override
     protected void onEnable() {
-        ((SimpleApplication) getApplication()).getGuiNode().attachChild(view.getMainContainer());
+        SimpleApplication app = (SimpleApplication) getApplication();
+        previousBackgroundColor = app.getViewPort().getBackgroundColor().clone();
+        app.getViewPort().setBackgroundColor(ColorRGBA.Black);
+        app.getGuiNode().attachChild(view.getMainContainer());
     }
 
     @Override
     protected void onDisable() {
+        SimpleApplication app = (SimpleApplication) getApplication();
+        if (previousBackgroundColor != null) {
+            app.getViewPort().setBackgroundColor(previousBackgroundColor);
+        }
         view.getMainContainer().removeFromParent();
     }
 
