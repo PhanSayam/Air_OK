@@ -66,7 +66,7 @@ public class Puck {
         puckVisualModel = assetManager.loadModel("Models/puck.glb");
         puckVisualBaseScale = fitModelToRadius(puckVisualModel, BASE_RADIUS);
         alignVisualModelOnPlayPlane(puckVisualModel);
-        disableBackFaceCulling(puckVisualModel);
+        makeGlbVisible(puckVisualModel);
 
         puckNode.attachChild(puckVisualModel);
         visualRadius = radius;
@@ -94,14 +94,29 @@ public class Puck {
         rigidbodyControl.setAngularFactor(1f);
     }
 
-    private void disableBackFaceCulling(Spatial model) {
+    private void makeGlbVisible(Spatial model) {
         model.depthFirstTraversal(new SceneGraphVisitorAdapter() {
             @Override
             public void visit(Geometry geom) {
-                if (geom.getMaterial() != null) {
-                    geom.getMaterial().getAdditionalRenderState()
-                            .setFaceCullMode(RenderState.FaceCullMode.Off);
+                Material src = geom.getMaterial();
+                Material dst = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+
+                if (src != null) {
+                    Object texVal = src.getParamValue("BaseColorMap");
+                    Object colVal = src.getParamValue("BaseColor");
+                    if (texVal instanceof Texture) {
+                        dst.setTexture("ColorMap", (Texture) texVal);
+                    } else if (colVal instanceof ColorRGBA) {
+                        dst.setColor("Color", (ColorRGBA) colVal);
+                    } else {
+                        dst.setColor("Color", new ColorRGBA(0.7f, 0.7f, 0.7f, 1f));
+                    }
+                } else {
+                    dst.setColor("Color", new ColorRGBA(0.7f, 0.7f, 0.7f, 1f));
                 }
+
+                dst.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
+                geom.setMaterial(dst);
             }
         });
     }

@@ -10,6 +10,7 @@ import com.jme3.bullet.collision.shapes.BoxCollisionShape;
 import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.util.CollisionShapeFactory;
+import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
@@ -17,6 +18,7 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.SceneGraphVisitorAdapter;
 import com.jme3.scene.Spatial;
+import com.jme3.texture.Texture;
 
 public class Table {
 
@@ -67,7 +69,7 @@ public class Table {
         bottomDecorModel = attachScaledModel(arenaNode, "Models/bottom.glb", "BottomDecorModel");
 
         for (Spatial s : new Spatial[]{tableModel, leftWallModel, rightWallModel, topDecorModel, bottomDecorModel}) {
-            disableBackFaceCulling(s);
+            makeGlbVisible(s);
         }
 
         alignArenaOnPlayPlane(arenaNode, tableModel);
@@ -190,14 +192,34 @@ public class Table {
         return legacyValue * (length / LEGACY_TABLE_LENGTH);
     }
 
-    private void disableBackFaceCulling(Spatial model) {
+    /**
+     * Replaces GLTF/PBR materials with Unshaded materials, extracting the
+     * embedded texture or base colour so the model is always visible regardless
+     * of lighting setup or face-normal orientation.
+     */
+    private void makeGlbVisible(Spatial model) {
         model.depthFirstTraversal(new SceneGraphVisitorAdapter() {
             @Override
             public void visit(Geometry geom) {
-                if (geom.getMaterial() != null) {
-                    geom.getMaterial().getAdditionalRenderState()
-                            .setFaceCullMode(RenderState.FaceCullMode.Off);
+                Material src = geom.getMaterial();
+                Material dst = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+
+                if (src != null) {
+                    Object texVal = src.getParamValue("BaseColorMap");
+                    Object colVal = src.getParamValue("BaseColor");
+                    if (texVal instanceof Texture) {
+                        dst.setTexture("ColorMap", (Texture) texVal);
+                    } else if (colVal instanceof ColorRGBA) {
+                        dst.setColor("Color", (ColorRGBA) colVal);
+                    } else {
+                        dst.setColor("Color", new ColorRGBA(0.7f, 0.7f, 0.7f, 1f));
+                    }
+                } else {
+                    dst.setColor("Color", new ColorRGBA(0.7f, 0.7f, 0.7f, 1f));
                 }
+
+                dst.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
+                geom.setMaterial(dst);
             }
         });
     }
