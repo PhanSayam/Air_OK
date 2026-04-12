@@ -22,6 +22,8 @@ import fr.utln.jmonkey.air_ok.view.MainMenuView;
 
 public class MainMenuState extends BaseAppState {
 
+    private static final float LEGACY_TABLE_WIDTH = 20f;
+    private static final float LEGACY_TABLE_LENGTH = 30f;
     private static final float PREVIEW_TABLE_PLANE_Y = Puck.HALF_HEIGHT;
     private static final float PREVIEW_CENTER_NEUTRAL_HALF_DEPTH = 2.2f;
     private static final float PREVIEW_PADDLE_SPEED = 9.6f;
@@ -202,11 +204,11 @@ public class MainMenuState extends BaseAppState {
         menuPreviewPuck.initPuck();
 
         menuPreviewNearPaddle = new Paddle(app.getAssetManager(), menuPreviewNode, menuPreviewBulletAppState,
-                new Vector3f(0f, PREVIEW_TABLE_PLANE_Y, 12f), ColorRGBA.Cyan);
+                new Vector3f(0f, PREVIEW_TABLE_PLANE_Y, getPreviewStartZ(true)), ColorRGBA.Cyan);
         menuPreviewNearPaddle.initPaddle();
 
         menuPreviewFarPaddle = new Paddle(app.getAssetManager(), menuPreviewNode, menuPreviewBulletAppState,
-                new Vector3f(0f, PREVIEW_TABLE_PLANE_Y, -12f), ColorRGBA.Green);
+                new Vector3f(0f, PREVIEW_TABLE_PLANE_Y, getPreviewStartZ(false)), ColorRGBA.Green);
         menuPreviewFarPaddle.initPaddle();
 
         previewServeCooldownSeconds = 0f;
@@ -247,14 +249,16 @@ public class MainMenuState extends BaseAppState {
 
         if (puckApproaching) {
             targetX = puckPosition.x + puckVelocity.x * 0.16f;
-            float strikeOffset = onPositiveZSide ? -1.2f : 1.2f;
+            float strikeOffsetMagnitude = scalePreviewLength(1.2f);
+            float strikeOffset = onPositiveZSide ? -strikeOffsetMagnitude : strikeOffsetMagnitude;
             targetZ = puckPosition.z + strikeOffset;
         } else {
             targetX = puckPosition.x * 0.34f;
-            targetZ = onPositiveZSide ? PREVIEW_PADDLE_DEFENSIVE_Z : -PREVIEW_PADDLE_DEFENSIVE_Z;
+            float defensiveZ = getPreviewPaddleDefensiveZ();
+            targetZ = onPositiveZSide ? defensiveZ : -defensiveZ;
         }
 
-        float maxStep = PREVIEW_PADDLE_SPEED * tpf;
+        float maxStep = getPreviewPaddleSpeed() * tpf;
         float dx = targetX - paddlePosition.x;
         float dz = targetZ - paddlePosition.z;
         float distance = (float) Math.sqrt(dx * dx + dz * dz);
@@ -270,7 +274,7 @@ public class MainMenuState extends BaseAppState {
         float halfWidth = menuPreviewTable.getWidth() / 2f;
         float halfLength = menuPreviewTable.getLength() / 2f;
         float radius = paddle.getRadius();
-        float centerLimit = PREVIEW_CENTER_NEUTRAL_HALF_DEPTH + radius;
+        float centerLimit = getPreviewCenterNeutralHalfDepth() + radius;
 
         nextX = Math.max(-(halfWidth - radius), Math.min(halfWidth - radius, nextX));
         if (onPositiveZSide) {
@@ -285,11 +289,12 @@ public class MainMenuState extends BaseAppState {
     private void sustainPreviewPuckSpeed() {
         Vector3f velocity = menuPreviewPuck.getVelocity();
         float speed = velocity.length();
-        if (speed <= 0.05f || speed >= PREVIEW_MIN_PUCK_SPEED) {
+        float minPuckSpeed = getPreviewMinPuckSpeed();
+        if (speed <= 0.05f || speed >= minPuckSpeed) {
             return;
         }
 
-        menuPreviewPuck.getPhysicsControl().setLinearVelocity(velocity.normalize().mult(PREVIEW_MIN_PUCK_SPEED));
+        menuPreviewPuck.getPhysicsControl().setLinearVelocity(velocity.normalize().mult(minPuckSpeed));
     }
 
     private void resetPreviewOnGoal() {
@@ -305,9 +310,10 @@ public class MainMenuState extends BaseAppState {
             return;
         }
 
-        if (puckPosition.z > halfLength + PREVIEW_GOAL_MARGIN) {
+        float goalMargin = getPreviewGoalMargin();
+        if (puckPosition.z > halfLength + goalMargin) {
             launchPreviewServe(-1f);
-        } else if (puckPosition.z < -halfLength - PREVIEW_GOAL_MARGIN) {
+        } else if (puckPosition.z < -halfLength - goalMargin) {
             launchPreviewServe(1f);
         }
     }
@@ -331,18 +337,73 @@ public class MainMenuState extends BaseAppState {
     }
 
     private void launchPreviewServe(float towardPositiveZ) {
-        float serveX = (random.nextFloat() - 0.5f) * 2.2f;
+        float serveX = (random.nextFloat() - 0.5f) * getPreviewServeSpreadX();
         menuPreviewPuck.resetPosition(new Vector3f(serveX, PREVIEW_TABLE_PLANE_Y, 0f));
 
-        float speed = PREVIEW_SERVE_MIN_SPEED
-                + random.nextFloat() * (PREVIEW_SERVE_MAX_SPEED - PREVIEW_SERVE_MIN_SPEED);
-        float vx = (random.nextFloat() - 0.5f) * 4.0f;
+        float serveMinSpeed = getPreviewServeMinSpeed();
+        float serveMaxSpeed = getPreviewServeMaxSpeed();
+        float speed = serveMinSpeed + random.nextFloat() * (serveMaxSpeed - serveMinSpeed);
+        float vx = (random.nextFloat() - 0.5f) * scalePreviewWidth(4.0f);
         float vz = speed * (towardPositiveZ >= 0f ? 1f : -1f);
         menuPreviewPuck.getPhysicsControl().setLinearVelocity(new Vector3f(vx, 0f, vz));
         menuPreviewPuck.getPhysicsControl().setAngularVelocity(new Vector3f(0f, (random.nextFloat() - 0.5f) * 10f, 0f));
 
         previewServeCooldownSeconds = PREVIEW_SERVE_COOLDOWN_SECONDS;
         previewStuckTimerSeconds = 0f;
+    }
+
+    private float scalePreviewLength(float legacyValue) {
+        if (menuPreviewTable == null) {
+            return legacyValue;
+        }
+        return legacyValue * (menuPreviewTable.getLength() / LEGACY_TABLE_LENGTH);
+    }
+
+    private float scalePreviewWidth(float legacyValue) {
+        if (menuPreviewTable == null) {
+            return legacyValue;
+        }
+        return legacyValue * (menuPreviewTable.getWidth() / LEGACY_TABLE_WIDTH);
+    }
+
+    private float getPreviewStartZ(boolean onPositiveZSide) {
+        float startZ = scalePreviewLength(12f);
+        return onPositiveZSide ? startZ : -startZ;
+    }
+
+    private float getPreviewCenterNeutralHalfDepth() {
+        if (menuPreviewTable == null) {
+            return PREVIEW_CENTER_NEUTRAL_HALF_DEPTH;
+        }
+        return menuPreviewTable.getCenterNeutralHalfDepth();
+    }
+
+    private float getPreviewPaddleSpeed() {
+        return scalePreviewLength(PREVIEW_PADDLE_SPEED);
+    }
+
+    private float getPreviewPaddleDefensiveZ() {
+        return scalePreviewLength(PREVIEW_PADDLE_DEFENSIVE_Z);
+    }
+
+    private float getPreviewGoalMargin() {
+        return scalePreviewLength(PREVIEW_GOAL_MARGIN);
+    }
+
+    private float getPreviewMinPuckSpeed() {
+        return scalePreviewLength(PREVIEW_MIN_PUCK_SPEED);
+    }
+
+    private float getPreviewServeMinSpeed() {
+        return scalePreviewLength(PREVIEW_SERVE_MIN_SPEED);
+    }
+
+    private float getPreviewServeMaxSpeed() {
+        return scalePreviewLength(PREVIEW_SERVE_MAX_SPEED);
+    }
+
+    private float getPreviewServeSpreadX() {
+        return scalePreviewWidth(2.2f);
     }
 
     private void setupMenuCamera() {

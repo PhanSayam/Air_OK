@@ -1,6 +1,7 @@
 package fr.utln.jmonkey.air_ok.model;
 
 import com.jme3.asset.AssetManager;
+import com.jme3.bounding.BoundingBox;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.collision.shapes.CylinderCollisionShape;
 import com.jme3.bullet.control.RigidBodyControl;
@@ -10,9 +11,8 @@ import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
-import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
-import com.jme3.scene.shape.Cylinder;
+import com.jme3.scene.Spatial;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
@@ -24,14 +24,9 @@ import java.nio.ByteBuffer;
 public class Puck {
 
     public static final float HALF_HEIGHT = 0.25f;
-    private static final String MATERIAL_COLOR_PARAM = "Color";
     private static final float BASE_RADIUS = 0.8f;
     private static final float SIZE_POWERUP_ANIM_DURATION = 1.35f;
-    private static final float SIZE_POWERUP_FLASH_DURATION = 1.20f;
     private static final float SIZE_POWERUP_OVERSHOOT = 0.16f;
-    private static final ColorRGBA BASE_PUCK_COLOR = new ColorRGBA(1f, 0f, 0f, 1f);
-    private static final ColorRGBA MARIO_GROW_FLASH_COLOR = new ColorRGBA(1f, 0.96f, 0.35f, 1f);
-    private static final ColorRGBA MARIO_SHRINK_FLASH_COLOR = new ColorRGBA(0.58f, 0.86f, 1f, 1f);
     /**
      * Collision shape is much taller to prevent the puck from tipping over walls.
      */
@@ -45,16 +40,14 @@ public class Puck {
     private BulletAppState bulletAppState;
     private RigidBodyControl rigidbodyControl;
     private Node puckNode;
-    private Geometry puckGeo;
-    private Geometry markerGeo;
-    private Material puckMat;
+    private Spatial puckVisualModel;
+    private float puckVisualBaseScale = 1f;
     private ParticleEmitter speedFireEmitter;
     private float speedFirePulseTime;
     private float visualRadius = BASE_RADIUS;
     private float sizeAnimFromRadius;
     private float sizeAnimToRadius;
     private float sizeAnimTimer;
-    private float sizeFlashTimer;
     private boolean sizeAnimActive;
     private boolean sizeAnimGrowing;
 
@@ -67,27 +60,13 @@ public class Puck {
     public void initPuck() {
         puckNode = new Node("PuckNode");
 
-        Cylinder puck = new Cylinder(2, 40, radius, 0.5f, true);
-        puckGeo = new Geometry("Puck", puck);
+        puckVisualModel = assetManager.loadModel("Models/puck.glb");
+        puckVisualBaseScale = fitModelToRadius(puckVisualModel, BASE_RADIUS);
+        alignVisualModelOnPlayPlane(puckVisualModel);
 
-        puckMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        puckMat.setColor(MATERIAL_COLOR_PARAM, BASE_PUCK_COLOR);
-        puckGeo.setMaterial(puckMat);
-
-        // Visual marker: one half in a contrasting color to make spin visible.
-        Cylinder halfMarker = new Cylinder(2, 40, radius * 0.52f, 0.52f, true);
-        markerGeo = new Geometry("PuckSpinMarker", halfMarker);
-        Material markerMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        markerMat.setColor(MATERIAL_COLOR_PARAM, ColorRGBA.White);
-        markerGeo.setMaterial(markerMat);
-        markerGeo.setLocalTranslation(radius * 0.48f, 0f, 0f);
-        // Rotate the individual visual meshes so their local Z axis points up (Y).
-        puckGeo.rotate(FastMath.HALF_PI, 0f, 0f);
-        markerGeo.rotate(FastMath.HALF_PI, 0f, 0f);
-
-        puckNode.attachChild(puckGeo);
-        puckNode.attachChild(markerGeo);
+        puckNode.attachChild(puckVisualModel);
         visualRadius = radius;
+        setVisualRadius(visualRadius);
 
         puckNode.setLocalTranslation(position);
         this.rootNode.attachChild(puckNode);
@@ -109,6 +88,62 @@ public class Puck {
         rigidbodyControl.setGravity(Vector3f.ZERO);
         // Allow rotation (spin around Y constrained in constrainToTablePlane).
         rigidbodyControl.setAngularFactor(1f);
+    }
+
+    private float fitModelToRadius(Spatial model, float targetRadius) {
+        BoundingBox bounds = getBounds(model);
+        if (bounds == null) {
+            return 1f;
+        }
+
+        float sourceRadius = Math.max(bounds.getXExtent(), bounds.getZExtent());
+        if (sourceRadius <= 0.0001f) {
+            return 1f;
+        }
+
+        float scale = targetRadius / sourceRadius;
+        model.setLocalScale(scale);
+        return scale;
+    }
+
+    private void alignVisualModelOnPlayPlane(Spatial model) {
+        // Detach temporarily so world space == model-local space when computing
+        // bounds. Without this, getWorldBound() includes the parent node's
+        // world position and corrupts the offset calculation.
+        Node parent = model.getParent();
+        if (parent != null) {
+            parent.detachChild(model);
+        }
+        model.setLocalTranslation(0f, 0f, 0f);
+        model.updateGeometricState();
+
+        Vector3f boundsCenter = null;
+        float boundsYExtent = 0f;
+        if (model.getWorldBound() instanceof BoundingBox box) {
+            boundsCenter = box.getCenter().clone();
+            boundsYExtent = box.getYExtent();
+        }
+
+        if (parent != null) {
+            parent.attachChild(model);
+        }
+        if (boundsCenter == null) {
+            return;
+        }
+
+        float minY = boundsCenter.y - boundsYExtent;
+        model.setLocalTranslation(
+                -boundsCenter.x,
+                -HALF_HEIGHT - minY,
+                -boundsCenter.z);
+    }
+
+    private BoundingBox getBounds(Spatial model) {
+        model.updateGeometricState();
+        if (model.getWorldBound() instanceof BoundingBox box) {
+            return box;
+        }
+        return null;
     }
 
     public RigidBodyControl getPhysicsControl() {
@@ -144,7 +179,6 @@ public class Puck {
         sizeAnimFromRadius = visualRadius;
         sizeAnimToRadius = targetRadius;
         sizeAnimTimer = 0f;
-        sizeFlashTimer = SIZE_POWERUP_FLASH_DURATION;
         sizeAnimGrowing = targetRadius >= visualRadius;
         sizeAnimActive = Math.abs(sizeAnimToRadius - sizeAnimFromRadius) > 0.0001f;
 
@@ -168,8 +202,6 @@ public class Puck {
                 setVisualRadius(sizeAnimToRadius);
             }
         }
-
-        updateSizePowerUpFlash(tpf);
     }
 
     private float applyRadiusScalePhysics(float scale) {
@@ -190,57 +222,21 @@ public class Puck {
 
     private void setVisualRadius(float newRadius) {
         visualRadius = Math.max(0.05f, newRadius);
-        if (puckNode != null) {
-            // Keep node scale neutral to avoid visual oval distortion.
-            puckNode.setLocalScale(1f, 1f, 1f);
+        if (puckVisualModel != null) {
+            float radiusScale = visualRadius / BASE_RADIUS;
+            puckVisualModel.setLocalScale(
+                    puckVisualBaseScale * radiusScale,
+                    puckVisualBaseScale,
+                    puckVisualBaseScale * radiusScale);
+            // Re-centre the visual model after any XZ scale change so the
+            // geometry stays aligned with the physics cylinder.
+            alignVisualModelOnPlayPlane(puckVisualModel);
         }
-        updateVisualRadius(visualRadius);
-    }
-
-    private void updateVisualRadius(float currentRadius) {
-        if (puckGeo == null || markerGeo == null) {
-            return;
-        }
-
-        // Rebuild meshes with a new radius to preserve a circular puck silhouette.
-        puckGeo.setMesh(new Cylinder(2, 40, currentRadius, 0.5f, true));
-        markerGeo.setMesh(new Cylinder(2, 40, currentRadius * 0.52f, 0.52f, true));
-        markerGeo.setLocalTranslation(currentRadius * 0.48f, 0f, 0f);
-    }
-
-    private void updateSizePowerUpFlash(float tpf) {
-        if (puckMat == null) {
-            return;
-        }
-
-        if (sizeFlashTimer <= 0f) {
-            puckMat.setColor(MATERIAL_COLOR_PARAM, BASE_PUCK_COLOR);
-            return;
-        }
-
-        sizeFlashTimer = Math.max(0f, sizeFlashTimer - tpf);
-        float elapsed = SIZE_POWERUP_FLASH_DURATION - sizeFlashTimer;
-        float pulse = 0.5f + 0.5f * FastMath.sin(elapsed * 30f);
-        float fade = Math.max(0f, sizeFlashTimer / SIZE_POWERUP_FLASH_DURATION);
-        float intensity = pulse * fade;
-
-        ColorRGBA target = sizeAnimGrowing ? MARIO_GROW_FLASH_COLOR : MARIO_SHRINK_FLASH_COLOR;
-        float inv = 1f - intensity;
-        ColorRGBA blended = new ColorRGBA(
-                BASE_PUCK_COLOR.r * inv + target.r * intensity,
-                BASE_PUCK_COLOR.g * inv + target.g * intensity,
-                BASE_PUCK_COLOR.b * inv + target.b * intensity,
-                1f);
-        puckMat.setColor(MATERIAL_COLOR_PARAM, blended);
     }
 
     private void cancelSizePowerupAnimation() {
         sizeAnimActive = false;
         sizeAnimTimer = 0f;
-        sizeFlashTimer = 0f;
-        if (puckMat != null) {
-            puckMat.setColor(MATERIAL_COLOR_PARAM, BASE_PUCK_COLOR);
-        }
     }
 
     public void resetRadiusScale() {

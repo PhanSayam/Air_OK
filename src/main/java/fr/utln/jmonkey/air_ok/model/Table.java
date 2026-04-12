@@ -1,38 +1,48 @@
 package fr.utln.jmonkey.air_ok.model;
 
 import com.jme3.asset.AssetManager;
+import com.jme3.bounding.BoundingBox;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.light.SpotLight;
-import com.jme3.material.Material;
-import com.jme3.math.ColorRGBA;
-import com.jme3.math.Vector3f;
-import com.jme3.scene.Geometry;
-import com.jme3.scene.Node;
-import com.jme3.scene.shape.Box;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.collision.shapes.BoxCollisionShape;
+import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.bullet.control.RigidBodyControl;
+import com.jme3.bullet.util.CollisionShapeFactory;
+import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
+import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 
 public class Table {
 
-    private static final float WIDTH = 20f;
-    private static final float LENGTH = 30f;
-    private static final float GOAL_WIDTH = 6f;
-    private static final float CENTER_NEUTRAL_HALF_DEPTH = 2.2f;
-    private static final float MARKING_HEIGHT = 0.015f;
-    /**
-     * Collision shapes for borders are much taller than their visuals to prevent
-     * puck tipping.
-     */
-    private static final float COLLISION_BORDER_HALF_HEIGHT = 2.5f;
+    private static final float MODEL_SCALE = 0.01f;
+    private static final float LEGACY_TABLE_WIDTH = 20f;
+    private static final float LEGACY_TABLE_LENGTH = 30f;
+    private static final float GOAL_WIDTH_RATIO = 6f / 20f;
+    private static final float LEGACY_CENTER_NEUTRAL_RATIO = 2.2f / 30f;
+    private static final float FALLBACK_WIDTH = 20f;
+    private static final float FALLBACK_LENGTH = 30f;
+    private static final float FLOOR_HALF_HEIGHT_LEGACY = 0.10f;
+    private static final float SIDE_WALL_HALF_THICKNESS_LEGACY = 1.0f;
+    private static final float SIDE_WALL_HALF_HEIGHT_LEGACY = 2.5f;
+    private static final float END_BORDER_HALF_THICKNESS_LEGACY = 1.0f;
+    private static final float WALL_CENTER_Y_LEGACY = 0.4f;
 
-    private AssetManager assetManager;
-    private Node rootNode;
-    private BulletAppState bulletAppState;
-    private Material sideWallMat;
-    private Material topCampMat;
-    private Material bottomCampMat;
+    private final AssetManager assetManager;
+    private final Node rootNode;
+    private final BulletAppState bulletAppState;
+
+    private Spatial leftWallModel;
+    private Spatial rightWallModel;
+    private Spatial topDecorModel;
+    private Spatial bottomDecorModel;
+
+    private float width = FALLBACK_WIDTH;
+    private float length = FALLBACK_LENGTH;
+    private float goalWidth = FALLBACK_WIDTH * GOAL_WIDTH_RATIO;
+    private float centerNeutralHalfDepth = FALLBACK_LENGTH * LEGACY_CENTER_NEUTRAL_RATIO;
 
     public Table(AssetManager assetManager, Node rootNode, BulletAppState bulletAppState) {
         this.assetManager = assetManager;
@@ -43,67 +53,134 @@ public class Table {
     public void initTable() {
         addArenaLights();
 
-        Material tableMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        tableMat.setColor("Color", new ColorRGBA(0.08f, 0.14f, 0.19f, 1f));
+        Node arenaNode = new Node("ArenaModelNode");
+        rootNode.attachChild(arenaNode);
 
-        sideWallMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        sideWallMat.setColor("Color", new ColorRGBA(0.06f, 0.10f, 0.16f, 1f));
+        Spatial tableModel = attachScaledModel(arenaNode, "Models/table.glb", "TableModel");
+        leftWallModel = attachScaledModel(arenaNode, "Models/wall1.glb", "LeftWallModel");
+        rightWallModel = attachScaledModel(arenaNode, "Models/wall2.glb", "RightWallModel");
 
-        topCampMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        topCampMat.setColor("Color", new ColorRGBA(0.97f, 0.45f, 0.10f, 1f));
+        topDecorModel = attachScaledModel(arenaNode, "Models/top.glb", "TopDecorModel");
+        bottomDecorModel = attachScaledModel(arenaNode, "Models/bottom.glb", "BottomDecorModel");
 
-        bottomCampMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        bottomCampMat.setColor("Color", new ColorRGBA(0.20f, 0.82f, 0.97f, 1f));
+        alignArenaOnPlayPlane(arenaNode, tableModel);
+        updateDimensionsFromTableModel(tableModel);
+        addGameplayColliders();
+    }
 
-        Box box = new Box(WIDTH / 2, 0.1f, LENGTH / 2);
-        Geometry table_geo = new Geometry("Box", box);
-        table_geo.setLocalTranslation(0, -0.1f, 0);
-        table_geo.setMaterial(tableMat);
-        this.rootNode.attachChild(table_geo);
+    private Spatial attachScaledModel(Node parent, String modelPath, String spatialName) {
+        Spatial model = assetManager.loadModel(modelPath);
+        model.setName(spatialName);
+        model.setLocalScale(MODEL_SCALE);
+        parent.attachChild(model);
+        return model;
+    }
 
-        addTableMarkings();
+    private void alignArenaOnPlayPlane(Node arenaNode, Spatial tableModel) {
+        BoundingBox tableBounds = getBounds(tableModel);
+        if (tableBounds == null) {
+            return;
+        }
 
-        RigidBodyControl table_phy = new RigidBodyControl(0.0f);
-        table_geo.addControl(table_phy);
-        bulletAppState.getPhysicsSpace().add(table_phy);
-        table_phy.setRestitution(1.0f);
-        table_phy.setFriction(0f);
+        float centerX = tableBounds.getCenter().x;
+        float centerZ = tableBounds.getCenter().z;
+        float topY = tableBounds.getCenter().y + tableBounds.getYExtent();
 
-        Box long_border = new Box(1f, 0.5f, LENGTH / 2);
+        arenaNode.setLocalTranslation(-centerX, -topY, -centerZ);
+        arenaNode.updateGeometricState();
+    }
 
-        Geometry Lborder_geo = new Geometry("leftBorder", long_border);
-        Lborder_geo.setMaterial(sideWallMat);
-        Lborder_geo.setLocalTranslation(-11f, 0.4f, 0);
-        this.rootNode.attachChild(Lborder_geo);
+    private void updateDimensionsFromTableModel(Spatial tableModel) {
+        BoundingBox tableBounds = getBounds(tableModel);
+        if (tableBounds == null) {
+            return;
+        }
 
-        // Collision shape is taller than the visual border to prevent puck from
-        // tipping.
-        BoxCollisionShape leftBorderShape = new BoxCollisionShape(
-                new Vector3f(1f, COLLISION_BORDER_HALF_HEIGHT, LENGTH / 2));
-        RigidBodyControl leftBorderPhysics = new RigidBodyControl(leftBorderShape, 0.0f);
-        Lborder_geo.addControl(leftBorderPhysics);
-        bulletAppState.getPhysicsSpace().add(leftBorderPhysics);
-        leftBorderPhysics.setRestitution(1.0f);
-        leftBorderPhysics.setFriction(0f);
+        width = tableBounds.getXExtent() * 2f;
+        length = tableBounds.getZExtent() * 2f;
+        goalWidth = width * GOAL_WIDTH_RATIO;
+        centerNeutralHalfDepth = length * LEGACY_CENTER_NEUTRAL_RATIO;
+    }
 
-        Geometry Rborder_geo = new Geometry("rightBorder", long_border);
-        Rborder_geo.setMaterial(sideWallMat);
-        Rborder_geo.setLocalTranslation(11f, 0.4f, 0f);
-        this.rootNode.attachChild(Rborder_geo);
+    private BoundingBox getBounds(Spatial spatial) {
+        spatial.updateGeometricState();
+        if (spatial.getWorldBound() instanceof BoundingBox box) {
+            return box;
+        }
+        return null;
+    }
 
-        addSideWallAccents();
+    private void addGameplayColliders() {
+        // Flat floor: a simple box is exact.
+        float floorHalfHeight = scaleLength(FLOOR_HALF_HEIGHT_LEGACY);
+        addStaticBoxCollider(
+                "tableFloorCollider",
+                new Vector3f(width / 2f, floorHalfHeight, length / 2f),
+                new Vector3f(0f, -floorHalfHeight, 0f));
 
-        // Collision shape is taller than the visual border to prevent puck from
-        // tipping.
-        BoxCollisionShape rightBorderShape = new BoxCollisionShape(
-                new Vector3f(1f, COLLISION_BORDER_HALF_HEIGHT, LENGTH / 2));
-        RigidBodyControl rightBorderPhysics = new RigidBodyControl(rightBorderShape, 0.0f);
-        Rborder_geo.addControl(rightBorderPhysics);
-        bulletAppState.getPhysicsSpace().add(rightBorderPhysics);
-        rightBorderPhysics.setRestitution(1.0f);
-        rightBorderPhysics.setFriction(0f);
+        // Side walls: use the actual mesh geometry so the rounded corners at each
+        // end of the wall are matched precisely. Top/bottom decorative models are
+        // intentionally left without a physics body (they only frame the goal area).
+        addStaticMeshCollider(leftWallModel);
+        addStaticMeshCollider(rightWallModel);
 
-        addGoalBordersAndFrames();
+        // End walls: two box segments per end, one on each side of the goal opening.
+        // Box colliders are safe here because the puck cannot get trapped in them.
+        float wallHalfThickness = scaleWidth(SIDE_WALL_HALF_THICKNESS_LEGACY);
+        float wallHalfHeight = scaleLength(SIDE_WALL_HALF_HEIGHT_LEGACY);
+        float wallCenterY = scaleLength(WALL_CENTER_Y_LEGACY);
+        float endBorderHalfThickness = scaleLength(END_BORDER_HALF_THICKNESS_LEGACY);
+        float sideSegmentHalf = (width - goalWidth) / 4f + wallHalfThickness / 2f;
+        float sideSegmentOffset = goalWidth / 2f + sideSegmentHalf;
+        float endSegmentZ = length / 2f + endBorderHalfThickness;
+
+        addStaticBoxCollider(
+                "topLeftGoalSegmentCollider",
+                new Vector3f(sideSegmentHalf, wallHalfHeight, endBorderHalfThickness),
+                new Vector3f(-sideSegmentOffset, wallCenterY, endSegmentZ));
+        addStaticBoxCollider(
+                "topRightGoalSegmentCollider",
+                new Vector3f(sideSegmentHalf, wallHalfHeight, endBorderHalfThickness),
+                new Vector3f(sideSegmentOffset, wallCenterY, endSegmentZ));
+        addStaticBoxCollider(
+                "bottomLeftGoalSegmentCollider",
+                new Vector3f(sideSegmentHalf, wallHalfHeight, endBorderHalfThickness),
+                new Vector3f(-sideSegmentOffset, wallCenterY, -endSegmentZ));
+        addStaticBoxCollider(
+                "bottomRightGoalSegmentCollider",
+                new Vector3f(sideSegmentHalf, wallHalfHeight, endBorderHalfThickness),
+                new Vector3f(sideSegmentOffset, wallCenterY, -endSegmentZ));
+    }
+
+    private void addStaticMeshCollider(Spatial model) {
+        model.updateGeometricState();
+        CollisionShape shape = CollisionShapeFactory.createMeshShape(model);
+        RigidBodyControl physicsControl = new RigidBodyControl(shape, 0.0f);
+        model.addControl(physicsControl);
+        bulletAppState.getPhysicsSpace().add(physicsControl);
+        physicsControl.setRestitution(1.0f);
+        physicsControl.setFriction(0f);
+    }
+
+    private void addStaticBoxCollider(String name, Vector3f halfExtents, Vector3f center) {
+        Node colliderNode = new Node(name);
+        colliderNode.setLocalTranslation(center);
+        rootNode.attachChild(colliderNode);
+
+        BoxCollisionShape collisionShape = new BoxCollisionShape(halfExtents);
+        RigidBodyControl physicsControl = new RigidBodyControl(collisionShape, 0.0f);
+        colliderNode.addControl(physicsControl);
+        bulletAppState.getPhysicsSpace().add(physicsControl);
+        physicsControl.setRestitution(1.0f);
+        physicsControl.setFriction(0f);
+    }
+
+    private float scaleWidth(float legacyValue) {
+        return legacyValue * (width / LEGACY_TABLE_WIDTH);
+    }
+
+    private float scaleLength(float legacyValue) {
+        return legacyValue * (length / LEGACY_TABLE_LENGTH);
     }
 
     private void addArenaLights() {
@@ -126,184 +203,19 @@ public class Table {
         rootNode.addLight(overheadLight);
     }
 
-    private void addTableMarkings() {
-        Material centerLineMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        centerLineMat.setColor("Color", new ColorRGBA(0.90f, 0.94f, 0.97f, 1f));
-
-        Material neutralZoneMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        neutralZoneMat.setColor("Color", new ColorRGBA(0.14f, 0.22f, 0.30f, 1f));
-
-        Material ringMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        ringMat.setColor("Color", new ColorRGBA(0.26f, 0.80f, 0.95f, 1f));
-
-        // Subtle neutral-zone strip in the center.
-        Box neutralStrip = new Box(WIDTH / 2f, MARKING_HEIGHT / 2f, CENTER_NEUTRAL_HALF_DEPTH);
-        Geometry neutralStripGeo = new Geometry("neutralStrip", neutralStrip);
-        neutralStripGeo.setMaterial(neutralZoneMat);
-        neutralStripGeo.setLocalTranslation(0f, MARKING_HEIGHT / 2f, 0f);
-        rootNode.attachChild(neutralStripGeo);
-
-        // Two delimitation lines for the no-player center zone.
-        Box centerLine = new Box(WIDTH / 2f, MARKING_HEIGHT / 2f, 0.08f);
-        Geometry upperCenterLine = new Geometry("upperCenterNeutralLine", centerLine);
-        upperCenterLine.setMaterial(centerLineMat);
-        upperCenterLine.setLocalTranslation(0f, MARKING_HEIGHT / 2f + 0.001f, CENTER_NEUTRAL_HALF_DEPTH);
-        rootNode.attachChild(upperCenterLine);
-
-        Geometry lowerCenterLine = new Geometry("lowerCenterNeutralLine", centerLine);
-        lowerCenterLine.setMaterial(centerLineMat);
-        lowerCenterLine.setLocalTranslation(0f, MARKING_HEIGHT / 2f + 0.001f, -CENTER_NEUTRAL_HALF_DEPTH);
-        rootNode.attachChild(lowerCenterLine);
-
-        // Decorative center ring and dot.
-        Box ringOuter = new Box(1.4f, MARKING_HEIGHT / 2f, 1.4f);
-        Geometry ringOuterGeo = new Geometry("centerRingOuter", ringOuter);
-        ringOuterGeo.setMaterial(ringMat);
-        ringOuterGeo.setLocalTranslation(0f, MARKING_HEIGHT / 2f + 0.002f, 0f);
-        rootNode.attachChild(ringOuterGeo);
-
-        Box ringInnerMask = new Box(1.0f, MARKING_HEIGHT, 1.0f);
-        Geometry ringInnerMaskGeo = new Geometry("centerRingInnerMask", ringInnerMask);
-        ringInnerMaskGeo.setMaterial(new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md"));
-        ringInnerMaskGeo.getMaterial().setColor("Color", new ColorRGBA(0.08f, 0.14f, 0.19f, 1f));
-        ringInnerMaskGeo.setLocalTranslation(0f, MARKING_HEIGHT, 0f);
-        rootNode.attachChild(ringInnerMaskGeo);
-
-        Box centerDot = new Box(0.18f, MARKING_HEIGHT / 2f, 0.18f);
-        Geometry centerDotGeo = new Geometry("centerDot", centerDot);
-        centerDotGeo.setMaterial(centerLineMat);
-        centerDotGeo.setLocalTranslation(0f, MARKING_HEIGHT / 2f + 0.003f, 0f);
-        rootNode.attachChild(centerDotGeo);
-
-        addGoalAreaMarkings();
-    }
-
-    private void addGoalAreaMarkings() {
-        float halfLength = LENGTH / 2f;
-
-        Material topGoalMarkMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        topGoalMarkMat.setColor("Color", new ColorRGBA(1f, 0.60f, 0.22f, 1f));
-
-        Material bottomGoalMarkMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        bottomGoalMarkMat.setColor("Color", new ColorRGBA(0.42f, 0.88f, 1f, 1f));
-
-        float laneDepth = 3.4f;
-        float laneHalfDepth = laneDepth / 2f;
-        float laneHalfWidth = GOAL_WIDTH / 2f + 0.9f;
-
-        Box lane = new Box(laneHalfWidth, MARKING_HEIGHT / 2f, laneHalfDepth);
-        Geometry topLane = new Geometry("topGoalLane", lane);
-        topLane.setMaterial(topGoalMarkMat);
-        topLane.setLocalTranslation(0f, MARKING_HEIGHT / 2f + 0.001f, halfLength - laneHalfDepth - 0.2f);
-        rootNode.attachChild(topLane);
-
-        Geometry bottomLane = new Geometry("bottomGoalLane", lane);
-        bottomLane.setMaterial(bottomGoalMarkMat);
-        bottomLane.setLocalTranslation(0f, MARKING_HEIGHT / 2f + 0.001f, -(halfLength - laneHalfDepth - 0.2f));
-        rootNode.attachChild(bottomLane);
-
-        Box goalMouthLine = new Box(GOAL_WIDTH / 2f, MARKING_HEIGHT / 2f, 0.06f);
-        Geometry topGoalMouthLine = new Geometry("topGoalMouthLine", goalMouthLine);
-        topGoalMouthLine.setMaterial(topCampMat);
-        topGoalMouthLine.setLocalTranslation(0f, MARKING_HEIGHT / 2f + 0.002f, halfLength - 0.14f);
-        rootNode.attachChild(topGoalMouthLine);
-
-        Geometry bottomGoalMouthLine = new Geometry("bottomGoalMouthLine", goalMouthLine);
-        bottomGoalMouthLine.setMaterial(bottomCampMat);
-        bottomGoalMouthLine.setLocalTranslation(0f, MARKING_HEIGHT / 2f + 0.002f, -(halfLength - 0.14f));
-        rootNode.attachChild(bottomGoalMouthLine);
-    }
-
-    private void addSideWallAccents() {
-        float halfLength = LENGTH / 2f;
-        float segmentHalfLength = halfLength / 2f - 0.45f;
-
-        Box accentSegment = new Box(0.12f, 0.08f, segmentHalfLength);
-
-        Geometry leftTopAccent = new Geometry("leftTopWallAccent", accentSegment);
-        leftTopAccent.setMaterial(topCampMat);
-        leftTopAccent.setLocalTranslation(-9.9f, 0.48f, halfLength / 2f);
-        rootNode.attachChild(leftTopAccent);
-
-        Geometry rightTopAccent = new Geometry("rightTopWallAccent", accentSegment);
-        rightTopAccent.setMaterial(topCampMat);
-        rightTopAccent.setLocalTranslation(9.9f, 0.48f, halfLength / 2f);
-        rootNode.attachChild(rightTopAccent);
-
-        Geometry leftBottomAccent = new Geometry("leftBottomWallAccent", accentSegment);
-        leftBottomAccent.setMaterial(bottomCampMat);
-        leftBottomAccent.setLocalTranslation(-9.9f, 0.48f, -(halfLength / 2f));
-        rootNode.attachChild(leftBottomAccent);
-
-        Geometry rightBottomAccent = new Geometry("rightBottomWallAccent", accentSegment);
-        rightBottomAccent.setMaterial(bottomCampMat);
-        rightBottomAccent.setLocalTranslation(9.9f, 0.48f, -(halfLength / 2f));
-        rootNode.attachChild(rightBottomAccent);
-    }
-
-    private void addGoalBordersAndFrames() {
-        float endBorderThickness = 1f;
-        float borderHeight = 0.5f;
-        float playableHalfWidth = WIDTH / 2f;
-        float playableHalfLength = LENGTH / 2f;
-        // Extend each segment toward side walls by half the wall thickness to avoid
-        // corner trapping.
-        float sideSegmentHalf = (WIDTH - GOAL_WIDTH) / 4f + endBorderThickness / 2f;
-        float sideSegmentOffset = GOAL_WIDTH / 2f + sideSegmentHalf;
-
-        Box sideSegment = new Box(sideSegmentHalf, borderHeight, endBorderThickness);
-
-        createStaticBorder("topLeftSegment", sideSegment, -sideSegmentOffset, 0.4f, playableHalfLength + 1f,
-                topCampMat);
-        createStaticBorder("topRightSegment", sideSegment, sideSegmentOffset, 0.4f, playableHalfLength + 1f,
-                topCampMat);
-        createStaticBorder("bottomLeftSegment", sideSegment, -sideSegmentOffset, 0.4f, -(playableHalfLength + 1f),
-                bottomCampMat);
-        createStaticBorder("bottomRightSegment", sideSegment, sideSegmentOffset, 0.4f, -(playableHalfLength + 1f),
-                bottomCampMat);
-
-        Material goalFrameMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        goalFrameMat.setColor("Color", new ColorRGBA(0.96f, 0.98f, 1f, 1f));
-
-        Box topCrossbar = new Box(GOAL_WIDTH / 2f, 0.2f, 0.1f);
-        Geometry topGoalGeo = new Geometry("topGoalFrame", topCrossbar);
-        topGoalGeo.setMaterial(topCampMat);
-        topGoalGeo.setLocalTranslation(0, 0.4f, playableHalfLength + 1.2f);
-        rootNode.attachChild(topGoalGeo);
-
-        Box bottomCrossbar = new Box(GOAL_WIDTH / 2f, 0.2f, 0.1f);
-        Geometry bottomGoalGeo = new Geometry("bottomGoalFrame", bottomCrossbar);
-        bottomGoalGeo.setMaterial(bottomCampMat);
-        bottomGoalGeo.setLocalTranslation(0, 0.4f, -(playableHalfLength + 1.2f));
-        rootNode.attachChild(bottomGoalGeo);
-    }
-
-    private void createStaticBorder(String name, Box box, float x, float y, float z, Material visualMaterial) {
-        Geometry borderGeo = new Geometry(name, box);
-        borderGeo.setMaterial(visualMaterial);
-        borderGeo.setLocalTranslation(x, y, z);
-        rootNode.attachChild(borderGeo);
-
-        // Use a taller collision shape than the visual box to prevent puck from
-        // tipping.
-        Vector3f halfExtents = new Vector3f(box.getXExtent(), COLLISION_BORDER_HALF_HEIGHT, box.getZExtent());
-        BoxCollisionShape borderShape = new BoxCollisionShape(halfExtents);
-        RigidBodyControl borderPhysics = new RigidBodyControl(borderShape, 0.0f);
-        borderGeo.addControl(borderPhysics);
-        bulletAppState.getPhysicsSpace().add(borderPhysics);
-        borderPhysics.setRestitution(1.0f);
-        borderPhysics.setFriction(0f);
-    }
-
     public float getWidth() {
-        return WIDTH;
+        return width;
     }
 
     public float getLength() {
-        return LENGTH;
+        return length;
     }
 
     public float getGoalWidth() {
-        return GOAL_WIDTH;
+        return goalWidth;
+    }
+
+    public float getCenterNeutralHalfDepth() {
+        return centerNeutralHalfDepth;
     }
 }
