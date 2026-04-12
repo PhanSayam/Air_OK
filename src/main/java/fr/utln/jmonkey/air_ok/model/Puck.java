@@ -8,10 +8,13 @@ import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.effect.ParticleEmitter;
 import com.jme3.effect.ParticleMesh;
 import com.jme3.material.Material;
+import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
+import com.jme3.scene.SceneGraphVisitorAdapter;
 import com.jme3.scene.Spatial;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
@@ -63,6 +66,7 @@ public class Puck {
         puckVisualModel = assetManager.loadModel("Models/puck.glb");
         puckVisualBaseScale = fitModelToRadius(puckVisualModel, BASE_RADIUS);
         alignVisualModelOnPlayPlane(puckVisualModel);
+        disableBackFaceCulling(puckVisualModel);
 
         puckNode.attachChild(puckVisualModel);
         visualRadius = radius;
@@ -88,6 +92,18 @@ public class Puck {
         rigidbodyControl.setGravity(Vector3f.ZERO);
         // Allow rotation (spin around Y constrained in constrainToTablePlane).
         rigidbodyControl.setAngularFactor(1f);
+    }
+
+    private void disableBackFaceCulling(Spatial model) {
+        model.depthFirstTraversal(new SceneGraphVisitorAdapter() {
+            @Override
+            public void visit(Geometry geom) {
+                if (geom.getMaterial() != null) {
+                    geom.getMaterial().getAdditionalRenderState()
+                            .setFaceCullMode(RenderState.FaceCullMode.Off);
+                }
+            }
+        });
     }
 
     private float fitModelToRadius(Spatial model, float targetRadius) {

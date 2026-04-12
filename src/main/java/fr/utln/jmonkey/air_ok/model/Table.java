@@ -10,9 +10,12 @@ import com.jme3.bullet.collision.shapes.BoxCollisionShape;
 import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.util.CollisionShapeFactory;
+import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
+import com.jme3.scene.SceneGraphVisitorAdapter;
 import com.jme3.scene.Spatial;
 
 public class Table {
@@ -62,6 +65,10 @@ public class Table {
 
         topDecorModel = attachScaledModel(arenaNode, "Models/top.glb", "TopDecorModel");
         bottomDecorModel = attachScaledModel(arenaNode, "Models/bottom.glb", "BottomDecorModel");
+
+        for (Spatial s : new Spatial[]{tableModel, leftWallModel, rightWallModel, topDecorModel, bottomDecorModel}) {
+            disableBackFaceCulling(s);
+        }
 
         alignArenaOnPlayPlane(arenaNode, tableModel);
         updateDimensionsFromTableModel(tableModel);
@@ -181,6 +188,18 @@ public class Table {
 
     private float scaleLength(float legacyValue) {
         return legacyValue * (length / LEGACY_TABLE_LENGTH);
+    }
+
+    private void disableBackFaceCulling(Spatial model) {
+        model.depthFirstTraversal(new SceneGraphVisitorAdapter() {
+            @Override
+            public void visit(Geometry geom) {
+                if (geom.getMaterial() != null) {
+                    geom.getMaterial().getAdditionalRenderState()
+                            .setFaceCullMode(RenderState.FaceCullMode.Off);
+                }
+            }
+        });
     }
 
     private void addArenaLights() {
