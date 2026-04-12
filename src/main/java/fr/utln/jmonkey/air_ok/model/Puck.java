@@ -26,14 +26,15 @@ import java.nio.ByteBuffer;
 
 public class Puck {
 
-    public static final float HALF_HEIGHT = 0.25f;
-    private static final float BASE_RADIUS = 0.8f;
+    public static final float HALF_HEIGHT = 25f;
+    private static final float BASE_RADIUS = 80f;
     private static final float SIZE_POWERUP_ANIM_DURATION = 1.35f;
     private static final float SIZE_POWERUP_OVERSHOOT = 0.16f;
+
     /**
      * Collision shape is much taller to prevent the puck from tipping over walls.
      */
-    private static final float COLLISION_HALF_HEIGHT = 1.25f;
+    private static final float COLLISION_HALF_HEIGHT = 125f;
 
     private Vector3f position = new Vector3f(0, HALF_HEIGHT, 0);
     private float radius = BASE_RADIUS;
@@ -75,8 +76,6 @@ public class Puck {
         puckNode.setLocalTranslation(position);
         this.rootNode.attachChild(puckNode);
 
-        // Collision shape is taller than the visual to prevent tipping at wall edges.
-        // Axis 1 means the cylinder's height is along the Y axis.
         CylinderCollisionShape puckShape = new CylinderCollisionShape(
                 new Vector3f(radius, COLLISION_HALF_HEIGHT, radius), 1);
         rigidbodyControl = new RigidBodyControl(puckShape, 5.0f);
@@ -86,11 +85,10 @@ public class Puck {
         rigidbodyControl.setRestitution(1.0f);
         rigidbodyControl.setFriction(0f);
         rigidbodyControl.setDamping(0f, 0f);
-        rigidbodyControl.setCcdMotionThreshold(0.01f);
+        rigidbodyControl.setCcdMotionThreshold(1f);
         rigidbodyControl.setCcdSweptSphereRadius(radius * 0.9f);
 
         rigidbodyControl.setGravity(Vector3f.ZERO);
-        // Allow rotation (spin around Y constrained in constrainToTablePlane).
         rigidbodyControl.setAngularFactor(1f);
     }
 
@@ -138,9 +136,6 @@ public class Puck {
     }
 
     private void alignVisualModelOnPlayPlane(Spatial model) {
-        // Detach temporarily so world space == model-local space when computing
-        // bounds. Without this, getWorldBound() includes the parent node's
-        // world position and corrupts the offset calculation.
         Node parent = model.getParent();
         if (parent != null) {
             parent.detachChild(model);
@@ -252,15 +247,13 @@ public class Puck {
     }
 
     private void setVisualRadius(float newRadius) {
-        visualRadius = Math.max(0.05f, newRadius);
+        visualRadius = Math.max(5f, newRadius);
         if (puckVisualModel != null) {
             float radiusScale = visualRadius / BASE_RADIUS;
             puckVisualModel.setLocalScale(
                     puckVisualBaseScale * radiusScale,
                     puckVisualBaseScale,
                     puckVisualBaseScale * radiusScale);
-            // Re-centre the visual model after any XZ scale change so the
-            // geometry stays aligned with the physics cylinder.
             alignVisualModelOnPlayPlane(puckVisualModel);
         }
     }
@@ -328,8 +321,8 @@ public class Puck {
         emitter.setHighLife(0.32f);
         emitter.setParticlesPerSec(95f);
 
-        emitter.setGravity(0f, -2.1f, 0f);
-        emitter.getParticleInfluencer().setInitialVelocity(new Vector3f(0f, 2.9f, 0f));
+        emitter.setGravity(0f, -210f, 0f);
+        emitter.getParticleInfluencer().setInitialVelocity(new Vector3f(0f, 290f, 0f));
         emitter.getParticleInfluencer().setVelocityVariation(0.42f);
         emitter.setRandomAngle(true);
         emitter.setRotateSpeed(8f);
@@ -409,13 +402,11 @@ public class Puck {
             rigidbodyControl.setLinearVelocity(new Vector3f(velocity.x, 0f, velocity.z));
         }
 
-        // Zero out any residual tilt angular velocity on X and Z axes.
         Vector3f angularVelocity = rigidbodyControl.getAngularVelocity();
         if (Math.abs(angularVelocity.x) > 0.0001f || Math.abs(angularVelocity.z) > 0.0001f) {
             rigidbodyControl.setAngularVelocity(new Vector3f(0f, angularVelocity.y, 0f));
         }
 
-        // Force the orientation to remain perfectly flat (no pitch or roll).
         com.jme3.math.Quaternion currentRot = rigidbodyControl.getPhysicsRotation();
         float[] angles = new float[3];
         currentRot.toAngles(angles);

@@ -5,26 +5,26 @@ import com.jme3.app.SimpleApplication;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.asset.AssetManager;
 import com.jme3.bullet.BulletAppState;
-import com.jme3.bullet.collision.PhysicsCollisionObject;
 import com.jme3.bullet.collision.PhysicsCollisionEvent;
 import com.jme3.bullet.collision.PhysicsCollisionListener;
-import com.jme3.math.ColorRGBA;
-import com.jme3.math.Vector3f;
-import com.jme3.renderer.Camera;
-import com.jme3.renderer.ViewPort;
+import com.jme3.bullet.collision.PhysicsCollisionObject;
 import com.jme3.font.BitmapFont;
 import com.jme3.font.BitmapText;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
+import com.jme3.renderer.Camera;
+import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Node;
 
-import java.util.Locale;
 import java.util.Random;
 
+import fr.utln.jmonkey.air_ok.controller.physics.PaddleController;
+import fr.utln.jmonkey.air_ok.controller.powerup.PowerUpManager;
 import fr.utln.jmonkey.air_ok.model.Paddle;
 import fr.utln.jmonkey.air_ok.model.Player;
-import fr.utln.jmonkey.air_ok.model.PowerUp;
 import fr.utln.jmonkey.air_ok.model.Puck;
 import fr.utln.jmonkey.air_ok.model.Table;
 import fr.utln.jmonkey.air_ok.model.rules.ScoreRules;
@@ -36,64 +36,26 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         TWO_PLAYER
     }
 
-    private static final float LEGACY_TABLE_WIDTH = 20f;
-    private static final float LEGACY_TABLE_LENGTH = 30f;
-    private static final float GOAL_MARGIN = 0.6f;
-    private static final float PADDLE_SPEED = 14f;
-    private static final float AI_PADDLE_SPEED = 11.5f;
-    private static final float AI_REACTION_DELAY_AFTER_SERVE_SECONDS = 0.45f;
-    private static final float TABLE_PLANE_Y = Puck.HALF_HEIGHT;
-    private static final float CENTER_NEUTRAL_HALF_DEPTH = 2.2f;
-    private static final float PLAYER_ONE_START_Z = 12f;
-    private static final float PLAYER_TWO_START_Z = -12f;
-    private static final float AI_DEFENSIVE_LINE_Z = -10.5f;
-    private static final float AI_INTERCEPT_LINE_Z = -7.2f;
-    private static final float AI_ATTACK_OFFSET = 1.35f;
-    private static final float SERVE_SAFE_PADDING = 0.25f;
-    private static final float GOAL_DETECTION_COOLDOWN_SECONDS = 0.75f;
-    private static final float SERVE_ARM_DISTANCE = 1.2f;
-    private static final float STUCK_SPEED_THRESHOLD = 0.18f;
-    private static final float STUCK_TIME_THRESHOLD_SECONDS = 2.2f;
-    private static final float SMASH_MIN_SPEED = 8.5f;
-    private static final float LIFT_MIN_SPEED = 4.5f;
-    private static final float FLIP_MAX_SPEED = 5.5f;
-    private static final float MAX_SPIN_Y = 22f;
-    private static final float SHOT_DEBUG_DISPLAY_SECONDS = 1.2f;
-    private static final float POWER_UP_SPAWN_MIN_SECONDS = 6f;
-    private static final float POWER_UP_SPAWN_MAX_SECONDS = 13f;
-    private static final float POWER_UP_EDGE_PADDING = 2.6f;
-    private static final float POWER_UP_GOAL_PADDING = 3.2f;
-    private static final float POWER_UP_SAFE_DISTANCE_FROM_PADDLE = 3.5f;
-    private static final float POWER_UP_SAFE_DISTANCE_FROM_PUCK = 2.5f;
-    private static final float POWER_UP_PUCK_EFFECT_DURATION_SECONDS = 10f;
-    private static final float POWER_UP_PADDLE_EFFECT_DURATION_SECONDS = 20f;
-    private static final float POWER_UP_SPEED_MULTIPLIER = 1.5f;
-    private static final float POWER_UP_PUCK_SIZE_PLUS_SCALE = 1.2f;
-    private static final float POWER_UP_PUCK_SIZE_MINUS_SCALE = 0.8f;
-    private static final float POWER_UP_PADDLE_SIZE_PLUS_SCALE = 1.30f;
-    private static final float POWER_UP_PADDLE_SIZE_MINUS_SCALE = 0.70f;
-    private static final float SHOT_ON_GOAL_MIN_SPEED = 9f;
-
-    private static final int HUMAN_PADDLE_GROUP = PhysicsCollisionObject.COLLISION_GROUP_02;
-    private static final int AI_PADDLE_GROUP = PhysicsCollisionObject.COLLISION_GROUP_03;
-    private static final int PLAYER2_PADDLE_GROUP = PhysicsCollisionObject.COLLISION_GROUP_04;
-
-    private static final String P1_MOVE_LEFT = "P1MoveLeft";
-    private static final String P1_MOVE_RIGHT = "P1MoveRight";
-    private static final String P1_MOVE_UP = "P1MoveUp";
-    private static final String P1_MOVE_DOWN = "P1MoveDown";
-    private static final String P2_MOVE_LEFT = "P2MoveLeft";
-    private static final String P2_MOVE_RIGHT = "P2MoveRight";
-    private static final String P2_MOVE_UP = "P2MoveUp";
-    private static final String P2_MOVE_DOWN = "P2MoveDown";
-    private static final String TOGGLE_DEBUG = "ToggleDebug";
-    private static final String RETURN_TO_MENU = "ReturnToMenu";
-
-    private enum Side {
+    public enum Side {
         PLAYER_ONE,
         PLAYER_TWO,
         NONE
     }
+
+    private static final float GOAL_MARGIN = 60f;
+    private static final float TABLE_PLANE_Y = Puck.HALF_HEIGHT;
+    private static final float CENTER_NEUTRAL_HALF_DEPTH = 220f;
+    private static final float PLAYER_ONE_START_Z = 1200f;
+    private static final float PLAYER_TWO_START_Z = -1200f;
+    private static final float SERVE_SAFE_PADDING = 25f;
+    private static final float GOAL_DETECTION_COOLDOWN_SECONDS = 0.75f;
+    private static final float SERVE_ARM_DISTANCE = 120f;
+    private static final float STUCK_SPEED_THRESHOLD = 0.18f;
+    private static final float STUCK_TIME_THRESHOLD_SECONDS = 2.2f;
+    private static final float AI_REACTION_DELAY_AFTER_SERVE_SECONDS = 0.45f;
+
+    private static final String TOGGLE_DEBUG = "ToggleDebug";
+    private static final String RETURN_TO_MENU = "ReturnToMenu";
 
     private Puck puck;
     private Paddle playerOnePaddle;
@@ -108,42 +70,21 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
     private Player playerOne;
     private Player playerTwo;
     private BitmapText scoreText;
-    private BitmapText shotDebugText;
-    private BitmapText powerUpStatusText;
-    private ActionListener paddleInputListener;
 
-    private boolean p1MoveLeft;
-    private boolean p1MoveRight;
-    private boolean p1MoveUp;
-    private boolean p1MoveDown;
-    private boolean p2MoveLeft;
-    private boolean p2MoveRight;
-    private boolean p2MoveUp;
-    private boolean p2MoveDown;
-    private boolean gameFinished;
     private final GameMode gameMode;
     private Side lastTouchSide = Side.NONE;
     private Side currentServer = Side.PLAYER_ONE;
     private float stuckTimerSeconds;
     private boolean rallyInProgress;
-    private Vector3f playerOnePaddleVelocity = Vector3f.ZERO;
-    private Vector3f playerTwoPaddleVelocity = Vector3f.ZERO;
-    private Vector3f aiPaddleVelocity = Vector3f.ZERO;
-    private float shotDebugTimerSeconds;
     private float goalDetectionCooldownSeconds;
-    private float aiServeDelaySeconds;
     private Vector3f lastServePosition = Vector3f.ZERO;
+    private boolean gameFinished;
     private final Random random = new Random();
-    private PowerUp activePowerUp;
-    private float powerUpSpawnTimerSeconds;
-    private float puckSpeedBoostTimerSeconds;
-    private float puckSpeedBoostMinSpeed;
-    private float puckSizeTimerSeconds;
-    private float puckSizeScale = 1f;
-    private float playerOnePaddleSizeTimerSeconds;
-    private float playerTwoPaddleSizeTimerSeconds;
-    private float playerOnePaddleSizeScale = 1f;
-    private float playerTwoPaddleSizeScale = 1f;
+
+    private PaddleController paddleController;
+    private PowerUpManager powerUpManager;
+
+    private ActionListener appInputListener;
 
     public GameState() {
         this(GameMode.SINGLE_PLAYER);
@@ -172,92 +113,97 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         puck = new Puck(simpleApp.getAssetManager(), gameNode, bulletAppState);
         puck.initPuck();
 
-        playerOnePaddle = new Paddle(simpleApp.getAssetManager(), gameNode, bulletAppState,
-                new Vector3f(0f, TABLE_PLANE_Y, getPlayerStartZ(Side.PLAYER_ONE)), ColorRGBA.Cyan);
+        playerOnePaddle = new Paddle(
+                simpleApp.getAssetManager(),
+                gameNode,
+                bulletAppState,
+                new Vector3f(0f, TABLE_PLANE_Y, getPlayerStartZ(Side.PLAYER_ONE)),
+                ColorRGBA.Cyan);
         playerOnePaddle.initPaddle();
-        configureHumanPaddleCollisions();
 
         if (gameMode == GameMode.SINGLE_PLAYER) {
-            aiPaddle = new Paddle(simpleApp.getAssetManager(), gameNode, bulletAppState,
-                    new Vector3f(0f, TABLE_PLANE_Y, getPlayerStartZ(Side.PLAYER_TWO)), ColorRGBA.Orange);
+            aiPaddle = new Paddle(
+                    simpleApp.getAssetManager(),
+                    gameNode,
+                    bulletAppState,
+                    new Vector3f(0f, TABLE_PLANE_Y, getPlayerStartZ(Side.PLAYER_TWO)),
+                    ColorRGBA.Orange);
             aiPaddle.initPaddle();
-            configureAIPaddleCollisions();
         } else {
-            playerTwoPaddle = new Paddle(simpleApp.getAssetManager(), gameNode, bulletAppState,
-                    new Vector3f(0f, TABLE_PLANE_Y, getPlayerStartZ(Side.PLAYER_TWO)), ColorRGBA.Green);
+            playerTwoPaddle = new Paddle(
+                    simpleApp.getAssetManager(),
+                    gameNode,
+                    bulletAppState,
+                    new Vector3f(0f, TABLE_PLANE_Y, getPlayerStartZ(Side.PLAYER_TWO)),
+                    ColorRGBA.Green);
             playerTwoPaddle.initPaddle();
-            configurePlayerTwoPaddleCollisions();
         }
+
+        paddleController = new PaddleController(
+                simpleApp,
+                bulletAppState,
+                gameMode,
+                puck,
+                playerOnePaddle,
+                playerTwoPaddle,
+                aiPaddle,
+                table,
+                TABLE_PLANE_Y);
+        paddleController.configureCollisionGroups();
+        paddleController.setupInput(simpleApp.getInputManager());
+
+        Paddle sideTwo = (gameMode == GameMode.TWO_PLAYER) ? playerTwoPaddle : aiPaddle;
+        powerUpManager = new PowerUpManager(
+                simpleApp.getAssetManager(),
+                gameNode,
+                bulletAppState,
+                puck,
+                table,
+                random,
+                gameMode,
+                TABLE_PLANE_Y);
+        powerUpManager.setPaddles(playerOnePaddle, sideTwo);
 
         playerOne = new Player("Joueur 1");
         playerTwo = new Player("Joueur 2");
-
         setupScoreDisplay(simpleApp.getAssetManager());
-        setupPaddleInput();
+
+        paddleController.attachShotDebugText(
+                simpleApp.getGuiNode(),
+                simpleApp.getAssetManager(),
+                simpleApp.getCamera().getHeight());
+
+        powerUpManager.attachToGui(
+                simpleApp.getGuiNode(),
+                simpleApp.getAssetManager(),
+                simpleApp.getCamera().getHeight());
+
+        setupAppInput();
+
         updateScoreText();
         startExchange(Side.PLAYER_ONE);
-        scheduleNextPowerUpSpawn();
+        powerUpManager.scheduleNextPowerUpSpawn();
     }
 
-    private void setupPaddleInput() {
-        // Support AZERTY (ZQSD) and QWERTY (WASD) layouts.
-        simpleApp.getInputManager().addMapping(P1_MOVE_LEFT, new KeyTrigger(KeyInput.KEY_Q),
-                new KeyTrigger(KeyInput.KEY_A));
-        simpleApp.getInputManager().addMapping(P1_MOVE_RIGHT, new KeyTrigger(KeyInput.KEY_D));
-        simpleApp.getInputManager().addMapping(P1_MOVE_UP, new KeyTrigger(KeyInput.KEY_Z),
-                new KeyTrigger(KeyInput.KEY_W));
-        simpleApp.getInputManager().addMapping(P1_MOVE_DOWN, new KeyTrigger(KeyInput.KEY_S));
-
-        simpleApp.getInputManager().addMapping(P2_MOVE_LEFT, new KeyTrigger(KeyInput.KEY_LEFT));
-        simpleApp.getInputManager().addMapping(P2_MOVE_RIGHT, new KeyTrigger(KeyInput.KEY_RIGHT));
-        simpleApp.getInputManager().addMapping(P2_MOVE_UP, new KeyTrigger(KeyInput.KEY_UP));
-        simpleApp.getInputManager().addMapping(P2_MOVE_DOWN, new KeyTrigger(KeyInput.KEY_DOWN));
+    private void setupAppInput() {
         simpleApp.getInputManager().addMapping(TOGGLE_DEBUG, new KeyTrigger(KeyInput.KEY_H));
         simpleApp.getInputManager().addMapping(RETURN_TO_MENU, new KeyTrigger(KeyInput.KEY_ESCAPE));
 
-        paddleInputListener = (name, isPressed, tpf) -> {
-            if (P1_MOVE_LEFT.equals(name)) {
-                p1MoveLeft = isPressed;
-            } else if (P1_MOVE_RIGHT.equals(name)) {
-                p1MoveRight = isPressed;
-            } else if (P1_MOVE_UP.equals(name)) {
-                p1MoveUp = isPressed;
-            } else if (P1_MOVE_DOWN.equals(name)) {
-                p1MoveDown = isPressed;
-            } else if (P2_MOVE_LEFT.equals(name)) {
-                p2MoveLeft = isPressed;
-            } else if (P2_MOVE_RIGHT.equals(name)) {
-                p2MoveRight = isPressed;
-            } else if (P2_MOVE_UP.equals(name)) {
-                p2MoveUp = isPressed;
-            } else if (P2_MOVE_DOWN.equals(name)) {
-                p2MoveDown = isPressed;
-            } else if (TOGGLE_DEBUG.equals(name) && isPressed) {
+        appInputListener = (name, isPressed, tpf) -> {
+            if (TOGGLE_DEBUG.equals(name) && isPressed) {
                 bulletAppState.setDebugEnabled(!bulletAppState.isDebugEnabled());
             } else if (RETURN_TO_MENU.equals(name) && isPressed) {
                 returnToMainMenu();
             }
         };
 
-        simpleApp.getInputManager().addListener(
-                paddleInputListener,
-                P1_MOVE_LEFT,
-                P1_MOVE_RIGHT,
-                P1_MOVE_UP,
-                P1_MOVE_DOWN,
-                P2_MOVE_LEFT,
-                P2_MOVE_RIGHT,
-                P2_MOVE_UP,
-                P2_MOVE_DOWN,
-                TOGGLE_DEBUG,
-                RETURN_TO_MENU);
+        simpleApp.getInputManager().addListener(appInputListener, TOGGLE_DEBUG, RETURN_TO_MENU);
     }
 
     private void returnToMainMenu() {
         if (gameFinished) {
             return;
         }
-
         gameFinished = true;
         getStateManager().detach(this);
         getStateManager().attach(new MainMenuState());
@@ -270,20 +216,20 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
             float splitAspect = (simpleApp.getCamera().getWidth() * 0.5f) / simpleApp.getCamera().getHeight();
 
             Camera leftCamera = simpleApp.getCamera().clone();
-            leftCamera.setFrustumPerspective(45f, splitAspect, 1f, 1000f);
+            leftCamera.setFrustumPerspective(45f, splitAspect, 1f, 5000f);
             leftCamera.setViewPort(0f, 0.5f, 0f, 1f);
-            leftCamera.setLocation(new Vector3f(0, 30f, 30f));
-            leftCamera.lookAt(new Vector3f(0, 0, 0), Vector3f.UNIT_Y);
+            leftCamera.setLocation(new Vector3f(0f, 2000f, 2000f));
+            leftCamera.lookAt(new Vector3f(0f, 0f, 0f), Vector3f.UNIT_Y);
             leftPlayerViewPort = simpleApp.getRenderManager().createMainView("LeftPlayerView", leftCamera);
             leftPlayerViewPort.setClearFlags(true, true, true);
             leftPlayerViewPort.setBackgroundColor(new ColorRGBA(0.12f, 0.16f, 0.22f, 1f));
             leftPlayerViewPort.attachScene(gameNode);
 
             Camera rightCamera = simpleApp.getCamera().clone();
-            rightCamera.setFrustumPerspective(45f, splitAspect, 1f, 1000f);
+            rightCamera.setFrustumPerspective(45f, splitAspect, 1f, 5000f);
             rightCamera.setViewPort(0.5f, 1f, 0f, 1f);
-            rightCamera.setLocation(new Vector3f(0, 30f, -30f));
-            rightCamera.lookAt(new Vector3f(0, 0, 0), Vector3f.UNIT_Y);
+            rightCamera.setLocation(new Vector3f(0f, 2000f, -2000f));
+            rightCamera.lookAt(new Vector3f(0f, 0f, 0f), Vector3f.UNIT_Y);
             rightPlayerViewPort = simpleApp.getRenderManager().createMainView("RightPlayerView", rightCamera);
             rightPlayerViewPort.setClearFlags(true, true, true);
             rightPlayerViewPort.setBackgroundColor(new ColorRGBA(0.12f, 0.16f, 0.22f, 1f));
@@ -291,8 +237,13 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         } else {
             simpleApp.getViewPort().setEnabled(true);
             simpleApp.getViewPort().setBackgroundColor(new ColorRGBA(0.12f, 0.16f, 0.22f, 1f));
-            simpleApp.getCamera().setLocation(new Vector3f(0, 30f, 30f));
-            simpleApp.getCamera().lookAt(new Vector3f(0, 0, 0), Vector3f.UNIT_Y);
+            simpleApp.getCamera().setFrustumPerspective(
+                    45f,
+                    (float) simpleApp.getCamera().getWidth() / simpleApp.getCamera().getHeight(),
+                    1f,
+                    5000f);
+            simpleApp.getCamera().setLocation(new Vector3f(0f, 2000f, 2000f));
+            simpleApp.getCamera().lookAt(new Vector3f(0f, 0f, 0f), Vector3f.UNIT_Y);
         }
     }
 
@@ -302,35 +253,10 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         scoreText.setSize(guiFont.getCharSet().getRenderedSize() * 1.5f);
         scoreText.setLocalTranslation(20f, simpleApp.getCamera().getHeight() - 20f, 0f);
         simpleApp.getGuiNode().attachChild(scoreText);
-
-        shotDebugText = new BitmapText(guiFont);
-        shotDebugText.setSize(guiFont.getCharSet().getRenderedSize() * 1.1f);
-        shotDebugText.setColor(ColorRGBA.Yellow);
-        shotDebugText.setLocalTranslation(20f, simpleApp.getCamera().getHeight() - 48f, 0f);
-        shotDebugText.setText("");
-        simpleApp.getGuiNode().attachChild(shotDebugText);
-
-        powerUpStatusText = new BitmapText(guiFont);
-        powerUpStatusText.setSize(guiFont.getCharSet().getRenderedSize() * 0.95f);
-        powerUpStatusText.setColor(ColorRGBA.White);
-        powerUpStatusText.setLocalTranslation(20f, simpleApp.getCamera().getHeight() - 76f, 0f);
-        powerUpStatusText.setText("Effets actifs : aucun");
-        simpleApp.getGuiNode().attachChild(powerUpStatusText);
     }
 
-    private void configureHumanPaddleCollisions() {
-        playerOnePaddle.getPhysicsControl().setCollisionGroup(HUMAN_PADDLE_GROUP);
-        playerOnePaddle.getPhysicsControl().setCollideWithGroups(PhysicsCollisionObject.COLLISION_GROUP_01);
-    }
-
-    private void configureAIPaddleCollisions() {
-        aiPaddle.getPhysicsControl().setCollisionGroup(AI_PADDLE_GROUP);
-        aiPaddle.getPhysicsControl().setCollideWithGroups(PhysicsCollisionObject.COLLISION_GROUP_01);
-    }
-
-    private void configurePlayerTwoPaddleCollisions() {
-        playerTwoPaddle.getPhysicsControl().setCollisionGroup(PLAYER2_PADDLE_GROUP);
-        playerTwoPaddle.getPhysicsControl().setCollideWithGroups(PhysicsCollisionObject.COLLISION_GROUP_01);
+    private void updateScoreText() {
+        scoreText.setText(ScoreRules.formatScore(playerOne, playerTwo));
     }
 
     private void startExchange(Side serverSide) {
@@ -338,15 +264,20 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         lastTouchSide = Side.NONE;
         rallyInProgress = false;
         stuckTimerSeconds = 0f;
-        playerOnePaddleVelocity = Vector3f.ZERO;
-        playerTwoPaddleVelocity = Vector3f.ZERO;
-        aiPaddleVelocity = Vector3f.ZERO;
+
+        if (paddleController != null) {
+            paddleController.resetVelocities();
+            paddleController.setAiServeDelay(
+                    (gameMode == GameMode.SINGLE_PLAYER) ? AI_REACTION_DELAY_AFTER_SERVE_SECONDS : 0f);
+        }
+        if (powerUpManager != null) {
+            powerUpManager.setLastTouchSide(lastTouchSide);
+            powerUpManager.setCurrentServer(currentServer);
+        }
 
         resetPaddlesToStartPositions();
 
         float serveX = 0f;
-        // Respawn points are aligned with the center neutral-zone boundary on each
-        // side.
         float centerNeutralHalfDepth = getCenterNeutralHalfDepth();
         float serveZ = (serverSide == Side.PLAYER_ONE) ? centerNeutralHalfDepth : -centerNeutralHalfDepth;
 
@@ -354,18 +285,17 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         float maxX = halfWidth - puck.getRadius();
         serveX = Math.max(-maxX, Math.min(maxX, serveX));
 
-        Vector3f servePosition = computeSafeServePosition(new Vector3f(serveX, TABLE_PLANE_Y, serveZ), serverSide);
+        Vector3f servePosition = computeSafeServePosition(
+                new Vector3f(serveX, TABLE_PLANE_Y, serveZ), serverSide);
         puck.resetPosition(servePosition);
         lastServePosition = servePosition.clone();
         goalDetectionCooldownSeconds = GOAL_DETECTION_COOLDOWN_SECONDS;
-        aiServeDelaySeconds = (gameMode == GameMode.SINGLE_PLAYER) ? AI_REACTION_DELAY_AFTER_SERVE_SECONDS : 0f;
     }
 
     private void resetPaddlesToStartPositions() {
         if (playerOnePaddle != null) {
             playerOnePaddle.setPosition(new Vector3f(0f, TABLE_PLANE_Y, getPlayerStartZ(Side.PLAYER_ONE)));
         }
-
         if (gameMode == GameMode.TWO_PLAYER) {
             if (playerTwoPaddle != null) {
                 playerTwoPaddle.setPosition(new Vector3f(0f, TABLE_PLANE_Y, getPlayerStartZ(Side.PLAYER_TWO)));
@@ -380,12 +310,10 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         Paddle serverPaddle = getPaddleForSide(serverSide);
         Paddle otherPaddle = getPaddleForSide(oppositeSide(serverSide));
 
-        // Iterate a few times because resolving one overlap can create another.
         for (int i = 0; i < 4; i++) {
             safe = pushServeAwayFromPaddle(safe, serverPaddle, serverSide);
             safe = pushServeAwayFromPaddle(safe, otherPaddle, serverSide);
         }
-
         return clampServeToValidArea(safe, serverSide);
     }
 
@@ -400,6 +328,7 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         float dx = servePosition.x - paddlePos.x;
         float dz = servePosition.z - paddlePos.z;
         float distSq = dx * dx + dz * dz;
+
         if (distSq >= minDistance * minDistance) {
             return servePosition;
         }
@@ -411,7 +340,6 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         if (dist > 0.0001f) {
             pushDir = new Vector3f(dx / dist, 0f, dz / dist);
         } else {
-            // If perfectly overlapping, nudge toward table center from serving side.
             float centerDirection = (serverSide == Side.PLAYER_ONE) ? -1f : 1f;
             pushDir = new Vector3f(0f, 0f, centerDirection);
         }
@@ -424,10 +352,10 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         float halfWidth = table.getWidth() / 2f;
         float halfLength = table.getLength() / 2f;
         float maxX = halfWidth - puck.getRadius();
+        float centerNeutralHalfDepth = getCenterNeutralHalfDepth();
 
         float minZ;
         float maxZ;
-        float centerNeutralHalfDepth = getCenterNeutralHalfDepth();
         if (serverSide == Side.PLAYER_ONE) {
             minZ = centerNeutralHalfDepth;
             maxZ = halfLength - puck.getRadius();
@@ -441,10 +369,6 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         return new Vector3f(clampedX, TABLE_PLANE_Y, clampedZ);
     }
 
-    private void updateScoreText() {
-        scoreText.setText(ScoreRules.formatScore(playerOne, playerTwo));
-    }
-
     private void checkGoals() {
         if (goalDetectionCooldownSeconds > 0f) {
             return;
@@ -453,7 +377,6 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         Vector3f puckPosition = puck.getPosition();
         float serveArmDistance = getServeArmDistance();
 
-        // Ignore goal checks while the puck is still around the fresh serve point.
         if (puckPosition.distanceSquared(lastServePosition) < serveArmDistance * serveArmDistance) {
             return;
         }
@@ -508,16 +431,40 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         getStateManager().attach(new EndScreenState(summary));
     }
 
+    private void updateRallyStateAndStuckDetection(float tpf) {
+        float speed = puck.getVelocity().length();
+
+        if (!rallyInProgress && speed > STUCK_SPEED_THRESHOLD) {
+            rallyInProgress = true;
+        }
+        if (!rallyInProgress) {
+            return;
+        }
+
+        if (speed < STUCK_SPEED_THRESHOLD) {
+            stuckTimerSeconds += tpf;
+        } else {
+            stuckTimerSeconds = 0f;
+        }
+
+        if (stuckTimerSeconds >= STUCK_TIME_THRESHOLD_SECONDS) {
+            Side nextServer = (lastTouchSide == Side.NONE)
+                    ? oppositeSide(currentServer)
+                    : oppositeSide(lastTouchSide);
+            startExchange(nextServer);
+        }
+    }
+
     @Override
     protected void cleanup(Application app) {
         if (scoreText != null) {
             scoreText.removeFromParent();
         }
-        if (shotDebugText != null) {
-            shotDebugText.removeFromParent();
+        if (paddleController != null && paddleController.getShotDebugText() != null) {
+            paddleController.getShotDebugText().removeFromParent();
         }
-        if (powerUpStatusText != null) {
-            powerUpStatusText.removeFromParent();
+        if (powerUpManager != null && powerUpManager.getStatusText() != null) {
+            powerUpManager.getStatusText().removeFromParent();
         }
 
         if (gameNode != null) {
@@ -532,59 +479,43 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
             rightPlayerViewPort.setEnabled(false);
             rightPlayerViewPort.clearScenes();
         }
+
         simpleApp.getViewPort().setEnabled(true);
 
-        clearActivePowerUp();
-        clearAllPowerUpEffects();
+        if (powerUpManager != null) {
+            powerUpManager.clearActivePowerUp();
+            powerUpManager.clearAllPowerUpEffects();
+        }
 
         if (bulletAppState != null && getStateManager().hasState(bulletAppState)) {
             bulletAppState.getPhysicsSpace().removeCollisionListener(this);
             getStateManager().detach(bulletAppState);
         }
 
-        if (paddleInputListener != null) {
-            simpleApp.getInputManager().removeListener(paddleInputListener);
+        if (paddleController != null) {
+            paddleController.cleanupInput(simpleApp.getInputManager());
         }
-        if (simpleApp.getInputManager().hasMapping(P1_MOVE_LEFT)) {
-            simpleApp.getInputManager().deleteMapping(P1_MOVE_LEFT);
+
+        if (appInputListener != null) {
+            simpleApp.getInputManager().removeListener(appInputListener);
         }
-        if (simpleApp.getInputManager().hasMapping(P1_MOVE_RIGHT)) {
-            simpleApp.getInputManager().deleteMapping(P1_MOVE_RIGHT);
-        }
-        if (simpleApp.getInputManager().hasMapping(P1_MOVE_UP)) {
-            simpleApp.getInputManager().deleteMapping(P1_MOVE_UP);
-        }
-        if (simpleApp.getInputManager().hasMapping(P1_MOVE_DOWN)) {
-            simpleApp.getInputManager().deleteMapping(P1_MOVE_DOWN);
-        }
-        if (simpleApp.getInputManager().hasMapping(P2_MOVE_LEFT)) {
-            simpleApp.getInputManager().deleteMapping(P2_MOVE_LEFT);
-        }
-        if (simpleApp.getInputManager().hasMapping(P2_MOVE_RIGHT)) {
-            simpleApp.getInputManager().deleteMapping(P2_MOVE_RIGHT);
-        }
-        if (simpleApp.getInputManager().hasMapping(P2_MOVE_UP)) {
-            simpleApp.getInputManager().deleteMapping(P2_MOVE_UP);
-        }
-        if (simpleApp.getInputManager().hasMapping(P2_MOVE_DOWN)) {
-            simpleApp.getInputManager().deleteMapping(P2_MOVE_DOWN);
-        }
-        if (simpleApp.getInputManager().hasMapping(TOGGLE_DEBUG)) {
-            simpleApp.getInputManager().deleteMapping(TOGGLE_DEBUG);
-        }
-        if (simpleApp.getInputManager().hasMapping(RETURN_TO_MENU)) {
-            simpleApp.getInputManager().deleteMapping(RETURN_TO_MENU);
+
+        deleteIfPresent(TOGGLE_DEBUG);
+        deleteIfPresent(RETURN_TO_MENU);
+    }
+
+    private void deleteIfPresent(String mapping) {
+        if (simpleApp.getInputManager().hasMapping(mapping)) {
+            simpleApp.getInputManager().deleteMapping(mapping);
         }
     }
 
     @Override
     protected void onEnable() {
-        /* Optional enable logic */
     }
 
     @Override
     protected void onDisable() {
-        /* Optional disable logic */
     }
 
     @Override
@@ -595,31 +526,12 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
             return;
         }
 
-        if (shotDebugTimerSeconds > 0f) {
-            shotDebugTimerSeconds -= tpf;
-            if (shotDebugTimerSeconds <= 0f && shotDebugText != null) {
-                shotDebugText.setText("");
-            }
-        }
-
         if (goalDetectionCooldownSeconds > 0f) {
             goalDetectionCooldownSeconds = Math.max(0f, goalDetectionCooldownSeconds - tpf);
         }
 
-        if (aiServeDelaySeconds > 0f) {
-            aiServeDelaySeconds = Math.max(0f, aiServeDelaySeconds - tpf);
-        }
+        paddleController.update(tpf);
 
-        updatePlayerOnePaddlePosition(tpf);
-        if (gameMode == GameMode.TWO_PLAYER) {
-            updatePlayerTwoPaddlePosition(tpf);
-        } else {
-            if (aiServeDelaySeconds <= 0f) {
-                updateAIPaddlePosition(tpf);
-            } else {
-                aiPaddleVelocity = Vector3f.ZERO;
-            }
-        }
         playerOnePaddle.constrainToTablePlane(TABLE_PLANE_Y);
         if (playerTwoPaddle != null) {
             playerTwoPaddle.constrainToTablePlane(TABLE_PLANE_Y);
@@ -628,591 +540,64 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
             aiPaddle.constrainToTablePlane(TABLE_PLANE_Y);
         }
         puck.constrainToTablePlane(TABLE_PLANE_Y);
-        updatePowerUpAnimations(tpf);
+
+        powerUpManager.updatePowerUpAnimations(tpf);
         updateRallyStateAndStuckDetection(tpf);
-        updatePowerUpSystem(tpf);
-        updatePowerUpStatusDisplay();
+        powerUpManager.update(tpf);
         checkGoals();
     }
 
-    private void updatePowerUpAnimations(float tpf) {
-        puck.updateSpeedFire(tpf);
-        puck.updateSizePowerUpAnimation(tpf);
-
-        if (playerOnePaddle != null) {
-            playerOnePaddle.updateSizePowerUpAnimation(tpf);
-        }
-        if (playerTwoPaddle != null) {
-            playerTwoPaddle.updateSizePowerUpAnimation(tpf);
-        }
-        if (aiPaddle != null) {
-            aiPaddle.updateSizePowerUpAnimation(tpf);
-        }
-    }
-
-    private void updatePowerUpSystem(float tpf) {
-        if (activePowerUp == null) {
-            powerUpSpawnTimerSeconds -= tpf;
-            if (powerUpSpawnTimerSeconds <= 0f) {
-                spawnRandomPowerUp();
-            }
-        } else {
-            tryCollectActivePowerUp();
-        }
-
-        updateTimedPowerUpEffects(tpf);
-    }
-
-    private void scheduleNextPowerUpSpawn() {
-        float delta = POWER_UP_SPAWN_MAX_SECONDS - POWER_UP_SPAWN_MIN_SECONDS;
-        powerUpSpawnTimerSeconds = POWER_UP_SPAWN_MIN_SECONDS + random.nextFloat() * delta;
-    }
-
-    private void spawnRandomPowerUp() {
-        PowerUp.Type[] availableTypes = PowerUp.Type.values();
-        PowerUp.Type selectedType = availableTypes[random.nextInt(availableTypes.length)];
-        Vector3f spawnPosition = findPowerUpSpawnPosition();
-        activePowerUp = new PowerUp(selectedType, spawnPosition, simpleApp.getAssetManager());
-        activePowerUp.attachTo(gameNode);
-    }
-
-    private Vector3f findPowerUpSpawnPosition() {
-        float halfWidth = table.getWidth() / 2f;
-        float halfLength = table.getLength() / 2f;
-        float edgePadding = getPowerUpEdgePadding();
-        float goalPadding = getPowerUpGoalPadding();
-        float minX = -(halfWidth - edgePadding);
-        float maxX = halfWidth - edgePadding;
-        float minZ = -(halfLength - goalPadding);
-        float maxZ = halfLength - goalPadding;
-
-        for (int i = 0; i < 12; i++) {
-            float x = minX + random.nextFloat() * (maxX - minX);
-            float z = minZ + random.nextFloat() * (maxZ - minZ);
-            Vector3f candidate = new Vector3f(x, TABLE_PLANE_Y, z);
-            if (isPowerUpSpawnSafe(candidate)) {
-                return candidate;
-            }
-        }
-
-        return new Vector3f(0f, TABLE_PLANE_Y, 0f);
-    }
-
-    private boolean isPowerUpSpawnSafe(Vector3f candidate) {
-        float minPuckDistance = getPowerUpSafeDistanceFromPuck();
-        float minPuckDistanceSq = minPuckDistance * minPuckDistance;
-        if (candidate.distanceSquared(puck.getPosition()) < minPuckDistanceSq) {
-            return false;
-        }
-
-        float minPaddleDistance = getPowerUpSafeDistanceFromPaddle();
-        float minPaddleDistanceSq = minPaddleDistance * minPaddleDistance;
-        Paddle sideOne = getPaddleForSide(Side.PLAYER_ONE);
-        if (sideOne != null && candidate.distanceSquared(sideOne.getPosition()) < minPaddleDistanceSq) {
-            return false;
-        }
-
-        Paddle sideTwo = getPaddleForSide(Side.PLAYER_TWO);
-        return sideTwo == null || candidate.distanceSquared(sideTwo.getPosition()) >= minPaddleDistanceSq;
-    }
-
-    private void tryCollectActivePowerUp() {
-        if (activePowerUp == null) {
+    @Override
+    public void collision(PhysicsCollisionEvent event) {
+        if (puck == null) {
             return;
         }
 
-        float triggerDistance = puck.getRadius() + activePowerUp.getRadius();
-        float triggerDistanceSq = triggerDistance * triggerDistance;
-        if (puck.getPosition().distanceSquared(activePowerUp.getPosition()) > triggerDistanceSq) {
+        PhysicsCollisionObject puckControl = puck.getPhysicsControl();
+        PhysicsCollisionObject objectA = event.getObjectA();
+        PhysicsCollisionObject objectB = event.getObjectB();
+
+        boolean puckInvolved = (objectA == puckControl) || (objectB == puckControl);
+        if (!puckInvolved) {
             return;
         }
 
-        Side collectingSide = resolveCollectingSide();
-        applyPowerUpEffect(activePowerUp.getType(), collectingSide);
-        showShotDebug("PowerUp: " + activePowerUp.getType().getLabel());
-
-        clearActivePowerUp();
-        scheduleNextPowerUpSpawn();
-    }
-
-    private Side resolveCollectingSide() {
-        if (lastTouchSide != Side.NONE) {
-            return lastTouchSide;
-        }
-
-        Vector3f puckVelocity = puck.getVelocity();
-        if (Math.abs(puckVelocity.z) > 0.2f) {
-            return (puckVelocity.z < 0f) ? Side.PLAYER_ONE : Side.PLAYER_TWO;
-        }
-
-        return currentServer;
-    }
-
-    private void applyPowerUpEffect(PowerUp.Type type, Side collectingSide) {
-        switch (type) {
-            case SPEED_PLUS -> applyPuckSpeedBoost();
-            case SIZE_PLUS -> applyPuckSizeScale(POWER_UP_PUCK_SIZE_PLUS_SCALE);
-            case SIZE_MINUS -> applyPuckSizeScale(POWER_UP_PUCK_SIZE_MINUS_SCALE);
-            case SHOT_ON_GOAL -> applyShotOnGoal(collectingSide);
-            case PADDLE_PLUS -> applyPaddleSizeScale(collectingSide, POWER_UP_PADDLE_SIZE_PLUS_SCALE);
-            case PADDLE_MINUS -> applyPaddleSizeScale(oppositeSide(collectingSide), POWER_UP_PADDLE_SIZE_MINUS_SCALE);
-            default -> {
-                // No default effect.
-            }
-        }
-    }
-
-    private void applyPuckSpeedBoost() {
-        Vector3f velocity = puck.getVelocity();
-        float speed = velocity.length();
-
-        if (speed > 0.05f) {
-            float boostedSpeed = speed * POWER_UP_SPEED_MULTIPLIER;
-            puck.getPhysicsControl().setLinearVelocity(velocity.normalize().mult(boostedSpeed));
-            puckSpeedBoostMinSpeed = boostedSpeed;
-        } else {
-            puckSpeedBoostMinSpeed = 0f;
-        }
-
-        puckSpeedBoostTimerSeconds = POWER_UP_PUCK_EFFECT_DURATION_SECONDS;
-        puck.setSpeedFireEnabled(true);
-    }
-
-    private void applyPuckSizeScale(float scale) {
-        puck.setRadiusScaleWithMarioAnimation(scale);
-        puckSizeScale = scale;
-        puckSizeTimerSeconds = POWER_UP_PUCK_EFFECT_DURATION_SECONDS;
-    }
-
-    private void applyShotOnGoal(Side collectingSide) {
-        Side targetSide = oppositeSide(collectingSide);
-        float goalTargetOffset = scaleLength(1f);
-        float targetZ = (targetSide == Side.PLAYER_ONE)
-                ? table.getLength() / 2f + goalTargetOffset
-                : -(table.getLength() / 2f + goalTargetOffset);
-        Vector3f target = new Vector3f(0f, TABLE_PLANE_Y, targetZ);
-
-        Vector3f direction = target.subtract(puck.getPosition());
-        direction.y = 0f;
-        if (direction.lengthSquared() < 0.0001f) {
+        PhysicsCollisionObject other = (objectA == puckControl) ? objectB : objectA;
+        if (other == null) {
             return;
         }
 
-        direction.normalizeLocal();
-        float currentSpeed = puck.getVelocity().length();
-        float launchSpeed = Math.max(SHOT_ON_GOAL_MIN_SPEED, currentSpeed);
-        puck.getPhysicsControl().setLinearVelocity(direction.mult(launchSpeed));
-
-        if (puckSpeedBoostTimerSeconds > 0f) {
-            puckSpeedBoostMinSpeed = Math.max(puckSpeedBoostMinSpeed, launchSpeed);
-        }
-    }
-
-    private void applyPaddleSizeScale(Side side, float scale) {
-        Paddle paddle = getPaddleForSide(side);
-        if (paddle == null) {
-            return;
-        }
-
-        paddle.setRadiusScaleWithMarioAnimation(scale);
-        if (side == Side.PLAYER_ONE) {
-            playerOnePaddleSizeScale = scale;
-            playerOnePaddleSizeTimerSeconds = POWER_UP_PADDLE_EFFECT_DURATION_SECONDS;
-        } else if (side == Side.PLAYER_TWO) {
-            playerTwoPaddleSizeScale = scale;
-            playerTwoPaddleSizeTimerSeconds = POWER_UP_PADDLE_EFFECT_DURATION_SECONDS;
-        }
-    }
-
-    private void updateTimedPowerUpEffects(float tpf) {
-        updatePuckSpeedBoostEffect(tpf);
-        updatePuckSizeEffect(tpf);
-        updatePlayerOnePaddleSizeEffect(tpf);
-        updatePlayerTwoPaddleSizeEffect(tpf);
-    }
-
-    private void updatePuckSpeedBoostEffect(float tpf) {
-        if (puckSpeedBoostTimerSeconds <= 0f) {
-            return;
-        }
-
-        puckSpeedBoostTimerSeconds = Math.max(0f, puckSpeedBoostTimerSeconds - tpf);
-        sustainPuckSpeedBoost();
-        if (puckSpeedBoostTimerSeconds <= 0f) {
-            puckSpeedBoostMinSpeed = 0f;
-            puck.setSpeedFireEnabled(false);
-        }
-    }
-
-    private void updatePuckSizeEffect(float tpf) {
-        if (puckSizeTimerSeconds <= 0f) {
-            return;
-        }
-
-        puckSizeTimerSeconds = Math.max(0f, puckSizeTimerSeconds - tpf);
-        if (puckSizeTimerSeconds <= 0f) {
-            puckSizeScale = 1f;
-            puck.resetRadiusScale();
-        }
-    }
-
-    private void updatePowerUpStatusDisplay() {
-        if (powerUpStatusText == null) {
-            return;
-        }
-
-        StringBuilder status = new StringBuilder("Effets actifs :");
-        boolean hasActive = false;
-
-        hasActive = appendTimedEffect(status, hasActive, "Speed +", puckSpeedBoostTimerSeconds);
-
-        if (puckSizeTimerSeconds > 0f) {
-            String puckSizeLabel = (puckSizeScale >= 1f) ? "Size +" : "Size -";
-            hasActive = appendTimedEffect(status, hasActive, puckSizeLabel, puckSizeTimerSeconds);
-        }
-
-        if (playerOnePaddleSizeTimerSeconds > 0f) {
-            String p1Label = (playerOnePaddleSizeScale >= 1f) ? "Paddle + J1" : "Paddle - J1";
-            hasActive = appendTimedEffect(status, hasActive, p1Label, playerOnePaddleSizeTimerSeconds);
-        }
-
-        if (playerTwoPaddleSizeTimerSeconds > 0f) {
-            String sideTwoLabel = (gameMode == GameMode.TWO_PLAYER) ? "J2" : "IA";
-            String p2Label = (playerTwoPaddleSizeScale >= 1f)
-                    ? "Paddle + " + sideTwoLabel
-                    : "Paddle - " + sideTwoLabel;
-            hasActive = appendTimedEffect(status, hasActive, p2Label, playerTwoPaddleSizeTimerSeconds);
-        }
-
-        if (!hasActive) {
-            status.append(" aucun");
-        }
-
-        powerUpStatusText.setText(status.toString());
-    }
-
-    private boolean appendTimedEffect(StringBuilder status, boolean hasActive, String effectLabel,
-            float remainingSeconds) {
-        if (remainingSeconds <= 0f) {
-            return hasActive;
-        }
-
-        status.append('\n')
-                .append("- ")
-                .append(effectLabel)
-                .append(" : ")
-                .append(formatRemainingSeconds(remainingSeconds));
-        return true;
-    }
-
-    private String formatRemainingSeconds(float seconds) {
-        float safeSeconds = Math.max(0f, seconds);
-        return String.format(Locale.ROOT, "%.1fs", safeSeconds);
-    }
-
-    private void updatePlayerOnePaddleSizeEffect(float tpf) {
-        if (playerOnePaddleSizeTimerSeconds <= 0f) {
-            return;
-        }
-
-        playerOnePaddleSizeTimerSeconds = Math.max(0f, playerOnePaddleSizeTimerSeconds - tpf);
-        if (playerOnePaddleSizeTimerSeconds > 0f || Math.abs(playerOnePaddleSizeScale - 1f) <= 0.0001f) {
-            return;
-        }
-
-        playerOnePaddleSizeScale = 1f;
-        if (playerOnePaddle != null) {
-            playerOnePaddle.resetRadiusScale();
-        }
-    }
-
-    private void updatePlayerTwoPaddleSizeEffect(float tpf) {
-        if (playerTwoPaddleSizeTimerSeconds <= 0f) {
-            return;
-        }
-
-        playerTwoPaddleSizeTimerSeconds = Math.max(0f, playerTwoPaddleSizeTimerSeconds - tpf);
-        if (playerTwoPaddleSizeTimerSeconds > 0f || Math.abs(playerTwoPaddleSizeScale - 1f) <= 0.0001f) {
-            return;
-        }
-
-        playerTwoPaddleSizeScale = 1f;
-        Paddle sideTwo = getPaddleForSide(Side.PLAYER_TWO);
-        if (sideTwo != null) {
-            sideTwo.resetRadiusScale();
-        }
-    }
-
-    private void sustainPuckSpeedBoost() {
-        if (puckSpeedBoostMinSpeed <= 0f) {
-            return;
-        }
-
-        Vector3f velocity = puck.getVelocity();
-        float speed = velocity.length();
-        if (speed > 0.05f && speed < puckSpeedBoostMinSpeed) {
-            puck.getPhysicsControl().setLinearVelocity(velocity.normalize().mult(puckSpeedBoostMinSpeed));
-        }
-    }
-
-    private void clearActivePowerUp() {
-        if (activePowerUp != null) {
-            activePowerUp.removeFromParent();
-            activePowerUp = null;
-        }
-    }
-
-    private void clearAllPowerUpEffects() {
-        puckSpeedBoostTimerSeconds = 0f;
-        puckSpeedBoostMinSpeed = 0f;
-        puckSizeTimerSeconds = 0f;
-        puckSizeScale = 1f;
-        playerOnePaddleSizeTimerSeconds = 0f;
-        playerTwoPaddleSizeTimerSeconds = 0f;
-        playerOnePaddleSizeScale = 1f;
-        playerTwoPaddleSizeScale = 1f;
-
-        if (puck != null) {
-            puck.setSpeedFireEnabled(false);
-            puck.resetRadiusScale();
-        }
-        if (playerOnePaddle != null) {
-            playerOnePaddle.resetRadiusScale();
-        }
-
-        Paddle sideTwo = getPaddleForSide(Side.PLAYER_TWO);
-        if (sideTwo != null) {
-            sideTwo.resetRadiusScale();
-        }
-    }
-
-    private void updateRallyStateAndStuckDetection(float tpf) {
-        float speed = puck.getVelocity().length();
-        if (!rallyInProgress && speed > STUCK_SPEED_THRESHOLD) {
+        if (playerOnePaddle != null && other == playerOnePaddle.getPhysicsControl()) {
+            lastTouchSide = Side.PLAYER_ONE;
             rallyInProgress = true;
-        }
-
-        if (!rallyInProgress) {
-            return;
-        }
-
-        if (speed < STUCK_SPEED_THRESHOLD) {
-            stuckTimerSeconds += tpf;
-        } else {
             stuckTimerSeconds = 0f;
-        }
 
-        if (stuckTimerSeconds >= STUCK_TIME_THRESHOLD_SECONDS) {
-            Side nextServer;
-            if (lastTouchSide == Side.NONE) {
-                nextServer = oppositeSide(currentServer);
-            } else {
-                nextServer = oppositeSide(lastTouchSide);
-            }
-            startExchange(nextServer);
-        }
-    }
-
-    private void updatePlayerOnePaddlePosition(float tpf) {
-        float safeTpf = Math.max(tpf, 0.0001f);
-        float paddleSpeed = getPaddleSpeed();
-        float deltaX = 0f;
-        float deltaZ = 0f;
-
-        if (p1MoveLeft) {
-            deltaX -= paddleSpeed * tpf;
-        }
-        if (p1MoveRight) {
-            deltaX += paddleSpeed * tpf;
-        }
-        if (p1MoveUp) {
-            deltaZ -= paddleSpeed * tpf;
-        }
-        if (p1MoveDown) {
-            deltaZ += paddleSpeed * tpf;
-        }
-
-        Vector3f currentPos = playerOnePaddle.getPosition();
-        float halfWidth = table.getWidth() / 2f;
-        float halfLength = table.getLength() / 2f;
-        float radius = playerOnePaddle.getRadius();
-        float centerLimit = getCenterNeutralHalfDepth() + radius;
-
-        float tableX = Math.max(-(halfWidth - radius), Math.min(halfWidth - radius, currentPos.x + deltaX));
-        float tableZ = Math.max(centerLimit, Math.min(halfLength - radius, currentPos.z + deltaZ));
-
-        Vector3f newPosition = new Vector3f(tableX, currentPos.y, tableZ);
-        playerOnePaddleVelocity = newPosition.subtract(currentPos).mult(1f / safeTpf);
-        playerOnePaddle.setPosition(newPosition);
-    }
-
-    private void updatePlayerTwoPaddlePosition(float tpf) {
-        if (playerTwoPaddle == null) {
-            return;
-        }
-
-        float safeTpf = Math.max(tpf, 0.0001f);
-        float paddleSpeed = getPaddleSpeed();
-
-        float deltaX = 0f;
-        float deltaZ = 0f;
-
-        if (p2MoveLeft) {
-            deltaX += paddleSpeed * tpf;
-        }
-        if (p2MoveRight) {
-            deltaX -= paddleSpeed * tpf;
-        }
-        // Camera is reversed for player two, so up/down are inverted in world Z.
-        if (p2MoveUp) {
-            deltaZ += paddleSpeed * tpf;
-        }
-        if (p2MoveDown) {
-            deltaZ -= paddleSpeed * tpf;
-        }
-
-        Vector3f currentPos = playerTwoPaddle.getPosition();
-        float halfWidth = table.getWidth() / 2f;
-        float halfLength = table.getLength() / 2f;
-        float radius = playerTwoPaddle.getRadius();
-        float centerLimit = getCenterNeutralHalfDepth() + radius;
-
-        float tableX = Math.max(-(halfWidth - radius), Math.min(halfWidth - radius, currentPos.x + deltaX));
-        float tableZ = Math.max(-(halfLength - radius), Math.min(-centerLimit, currentPos.z + deltaZ));
-
-        Vector3f newPosition = new Vector3f(tableX, currentPos.y, tableZ);
-        playerTwoPaddleVelocity = newPosition.subtract(currentPos).mult(1f / safeTpf);
-        playerTwoPaddle.setPosition(newPosition);
-    }
-
-    private void updateAIPaddlePosition(float tpf) {
-        if (aiPaddle == null) {
-            return;
-        }
-
-        float safeTpf = Math.max(tpf, 0.0001f);
-
-        Vector3f puckPos = puck.getPosition();
-        Vector3f puckVel = puck.getVelocity();
-        Vector3f aiPos = aiPaddle.getPosition();
-        float halfLength = table.getLength() / 2f;
-        Vector3f targetGoal = new Vector3f(0f, TABLE_PLANE_Y, halfLength + scaleLength(1f));
-        float aiInterceptLineZ = getAIInterceptLineZ();
-        float aiDefensiveLineZ = getAIDefensiveLineZ();
-
-        float targetX;
-        float targetZ;
-        if (puckPos.z < aiInterceptLineZ && puckVel.z < -0.15f) {
-            float timeToIntercept = (aiInterceptLineZ - puckPos.z) / puckVel.z;
-            float predictedX = puckPos.x + puckVel.x * Math.max(0f, timeToIntercept);
-            targetX = predictedX;
-            targetZ = aiInterceptLineZ;
-        } else if (puckPos.z < -0.5f) {
-            Vector3f strikeDir = targetGoal.subtract(puckPos);
-            strikeDir.y = 0f;
-            if (strikeDir.lengthSquared() > 0.0001f) {
-                strikeDir.normalizeLocal();
-            } else {
-                strikeDir.set(0f, 0f, 1f);
+            if (powerUpManager != null) {
+                powerUpManager.setLastTouchSide(lastTouchSide);
             }
 
-            Vector3f strikePoint = puckPos.subtract(strikeDir.mult(getAIAttackOffset()));
-            targetX = strikePoint.x;
-            targetZ = strikePoint.z;
-        } else {
-            targetX = puckPos.x * 0.4f;
-            targetZ = aiDefensiveLineZ;
-        }
-
-        float maxStep = getAIPaddleSpeed() * tpf;
-        float dx = targetX - aiPos.x;
-        float dz = targetZ - aiPos.z;
-        float distance = (float) Math.sqrt(dx * dx + dz * dz);
-
-        float nextX = aiPos.x;
-        float nextZ = aiPos.z;
-        if (distance > 0.0001f) {
-            float ratio = Math.min(1f, maxStep / distance);
-            nextX += dx * ratio;
-            nextZ += dz * ratio;
-        }
-
-        float halfWidth = table.getWidth() / 2f;
-        float radius = aiPaddle.getRadius();
-        float centerLimit = getCenterNeutralHalfDepth() + radius;
-
-        nextX = Math.max(-(halfWidth - radius), Math.min(halfWidth - radius, nextX));
-        nextZ = Math.max(-(halfLength - radius), Math.min(-centerLimit, nextZ));
-
-        Vector3f newPosition = new Vector3f(nextX, TABLE_PLANE_Y, nextZ);
-        aiPaddleVelocity = newPosition.subtract(aiPos).mult(1f / safeTpf);
-        aiPaddle.setPosition(newPosition);
-    }
-
-    private void applyShotPhysics(Side strikerSide, Vector3f paddleVelocity) {
-        if (paddleVelocity == null) {
+            paddleController.applyShotPhysics(
+                    Side.PLAYER_ONE,
+                    paddleController.getPlayerOnePaddleVelocity());
             return;
         }
 
-        float paddleSpeed = paddleVelocity.length();
-        if (paddleSpeed < 0.05f) {
-            return;
-        }
+        Paddle sideTwoPaddle = (gameMode == GameMode.TWO_PLAYER) ? playerTwoPaddle : aiPaddle;
+        if (sideTwoPaddle != null && other == sideTwoPaddle.getPhysicsControl()) {
+            lastTouchSide = Side.PLAYER_TWO;
+            rallyInProgress = true;
+            stuckTimerSeconds = 0f;
 
-        Vector3f goalDirection = (strikerSide == Side.PLAYER_ONE) ? new Vector3f(0f, 0f, -1f)
-                : new Vector3f(0f, 0f, 1f);
-        Vector3f paddleDir = paddleVelocity.normalize();
-        float onTarget = paddleDir.dot(goalDirection);
-        float lateral = (float) Math.sqrt(Math.max(0f, 1f - onTarget * onTarget));
-
-        Vector3f puckVelocity = puck.getVelocity();
-        float puckSpeed = puckVelocity.length();
-        String detectedShot = null;
-
-        // Smash: hard, well-targeted hit gives +5% to +15% speed.
-        if (paddleSpeed >= SMASH_MIN_SPEED && onTarget > 0.7f) {
-            float boost = 1.05f + (float) Math.random() * 0.10f;
-            Vector3f boosted = puckVelocity.mult(boost);
-            if (boosted.length() < paddleSpeed * 0.5f) {
-                boosted = paddleDir.mult(paddleSpeed * 0.5f);
-            }
-            puck.getPhysicsControl().setLinearVelocity(boosted);
-            detectedShot = "SMASH";
-        }
-
-        // Lift: angled strike imparts spin around vertical axis.
-        if (paddleSpeed >= LIFT_MIN_SPEED && lateral > 0.35f) {
-            Vector3f spinAxis = paddleDir.cross(Vector3f.UNIT_Y);
-            if (spinAxis.lengthSquared() > 0.0001f) {
-                spinAxis.normalizeLocal();
-            } else {
-                spinAxis.set(1f, 0f, 0f);
+            if (powerUpManager != null) {
+                powerUpManager.setLastTouchSide(lastTouchSide);
             }
 
-            float spinAmount = Math.min(MAX_SPIN_Y, lateral * paddleSpeed * 1.2f);
-            Vector3f currentSpin = puck.getPhysicsControl().getAngularVelocity();
-            puck.getPhysicsControl().setAngularVelocity(currentSpin.add(spinAxis.mult(spinAmount)));
-            detectedShot = (detectedShot == null) ? "LIFT" : detectedShot + " + LIFT";
-        }
+            Vector3f sideTwoVelocity = (gameMode == GameMode.TWO_PLAYER)
+                    ? paddleController.getPlayerTwoPaddleVelocity()
+                    : paddleController.getAiPaddleVelocity();
 
-        // Flip: poorly oriented / soft hit slows the puck down.
-        if (paddleSpeed <= FLIP_MAX_SPEED && onTarget < 0.25f && puckSpeed > 0.1f) {
-            float slowdown = 0.78f + (float) Math.random() * 0.12f;
-            puck.getPhysicsControl().setLinearVelocity(puckVelocity.mult(slowdown));
-            detectedShot = "FLIP";
+            paddleController.applyShotPhysics(Side.PLAYER_TWO, sideTwoVelocity);
         }
-
-        if (detectedShot != null) {
-            showShotDebug(detectedShot);
-        }
-    }
-
-    private void showShotDebug(String shotLabel) {
-        if (shotDebugText == null) {
-            return;
-        }
-        shotDebugText.setText("Shot: " + shotLabel);
-        shotDebugTimerSeconds = SHOT_DEBUG_DISPLAY_SECONDS;
     }
 
     private Player getPlayerForSide(Side side) {
@@ -1245,22 +630,8 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         return Side.NONE;
     }
 
-    private float scaleLength(float legacyValue) {
-        if (table == null) {
-            return legacyValue;
-        }
-        return legacyValue * (table.getLength() / LEGACY_TABLE_LENGTH);
-    }
-
-    private float scaleWidth(float legacyValue) {
-        if (table == null) {
-            return legacyValue;
-        }
-        return legacyValue * (table.getWidth() / LEGACY_TABLE_WIDTH);
-    }
-
-    private float scaleAverage(float legacyValue) {
-        return (scaleLength(legacyValue) + scaleWidth(legacyValue)) * 0.5f;
+    private float getPlayerStartZ(Side side) {
+        return (side == Side.PLAYER_ONE) ? PLAYER_ONE_START_Z : PLAYER_TWO_START_Z;
     }
 
     private float getCenterNeutralHalfDepth() {
@@ -1270,96 +641,15 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         return table.getCenterNeutralHalfDepth();
     }
 
-    private float getPlayerStartZ(Side side) {
-        return (side == Side.PLAYER_ONE)
-                ? scaleLength(PLAYER_ONE_START_Z)
-                : scaleLength(PLAYER_TWO_START_Z);
-    }
-
-    private float getAIDefensiveLineZ() {
-        return scaleLength(AI_DEFENSIVE_LINE_Z);
-    }
-
-    private float getAIInterceptLineZ() {
-        return scaleLength(AI_INTERCEPT_LINE_Z);
-    }
-
-    private float getAIAttackOffset() {
-        return scaleLength(AI_ATTACK_OFFSET);
-    }
-
     private float getGoalMargin() {
-        return scaleLength(GOAL_MARGIN);
+        return GOAL_MARGIN;
     }
 
     private float getServeSafePadding() {
-        return scaleAverage(SERVE_SAFE_PADDING);
+        return SERVE_SAFE_PADDING;
     }
 
     private float getServeArmDistance() {
-        return scaleAverage(SERVE_ARM_DISTANCE);
+        return SERVE_ARM_DISTANCE;
     }
-
-    private float getPowerUpEdgePadding() {
-        return scaleWidth(POWER_UP_EDGE_PADDING);
-    }
-
-    private float getPowerUpGoalPadding() {
-        return scaleLength(POWER_UP_GOAL_PADDING);
-    }
-
-    private float getPowerUpSafeDistanceFromPaddle() {
-        return scaleAverage(POWER_UP_SAFE_DISTANCE_FROM_PADDLE);
-    }
-
-    private float getPowerUpSafeDistanceFromPuck() {
-        return scaleAverage(POWER_UP_SAFE_DISTANCE_FROM_PUCK);
-    }
-
-    private float getPaddleSpeed() {
-        return scaleLength(PADDLE_SPEED);
-    }
-
-    private float getAIPaddleSpeed() {
-        return scaleLength(AI_PADDLE_SPEED);
-    }
-
-    @Override
-    public void collision(PhysicsCollisionEvent event) {
-        if (puck == null) {
-            return;
-        }
-
-        PhysicsCollisionObject puckControl = puck.getPhysicsControl();
-        PhysicsCollisionObject objectA = event.getObjectA();
-        PhysicsCollisionObject objectB = event.getObjectB();
-
-        boolean puckInvolved = (objectA == puckControl) || (objectB == puckControl);
-        if (!puckInvolved) {
-            return;
-        }
-
-        PhysicsCollisionObject other = (objectA == puckControl) ? objectB : objectA;
-        if (other == null) {
-            return;
-        }
-
-        if (playerOnePaddle != null && other == playerOnePaddle.getPhysicsControl()) {
-            lastTouchSide = Side.PLAYER_ONE;
-            rallyInProgress = true;
-            stuckTimerSeconds = 0f;
-            applyShotPhysics(Side.PLAYER_ONE, playerOnePaddleVelocity);
-            return;
-        }
-
-        Paddle sideTwoPaddle = (gameMode == GameMode.TWO_PLAYER) ? playerTwoPaddle : aiPaddle;
-        if (sideTwoPaddle != null && other == sideTwoPaddle.getPhysicsControl()) {
-            lastTouchSide = Side.PLAYER_TWO;
-            rallyInProgress = true;
-            stuckTimerSeconds = 0f;
-            Vector3f sideTwoVelocity = (gameMode == GameMode.TWO_PLAYER) ? playerTwoPaddleVelocity : aiPaddleVelocity;
-            applyShotPhysics(Side.PLAYER_TWO, sideTwoVelocity);
-        }
-    }
-
 }

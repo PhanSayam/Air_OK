@@ -16,14 +16,15 @@ import com.jme3.scene.Spatial;
 
 public class Paddle {
 
-    public static final float HALF_HEIGHT = 0.25f;
-    private static final float BASE_RADIUS = 1.0f;
+    public static final float HALF_HEIGHT = 25f;
+    private static final float BASE_RADIUS = 100f;
     private static final float MIN_RADIUS_SCALE = 0.45f;
+
     /**
      * Collision shape is taller than the visual to prevent puck from tipping over
      * paddle.
      */
-    private static final float COLLISION_HALF_HEIGHT = 1.25f;
+    private static final float COLLISION_HALF_HEIGHT = 125f;
 
     private Vector3f position;
     private float radius = BASE_RADIUS;
@@ -38,7 +39,7 @@ public class Paddle {
     private RigidBodyControl paddlePhysics;
 
     public Paddle(AssetManager assetManager, Node rootNode, BulletAppState bulletAppState) {
-        this(assetManager, rootNode, bulletAppState, new Vector3f(0, HALF_HEIGHT, 12f), ColorRGBA.Cyan);
+        this(assetManager, rootNode, bulletAppState, new Vector3f(0, HALF_HEIGHT, 1200f), ColorRGBA.Cyan);
     }
 
     public Paddle(AssetManager assetManager, Node rootNode, BulletAppState bulletAppState,
@@ -62,19 +63,18 @@ public class Paddle {
         paddleNode.setLocalTranslation(position);
         this.rootNode.attachChild(paddleNode);
 
-        // Collision shape is taller than the visual to prevent puck tipping.
-        // Axis 1 means the cylinder's height is along the Y axis.
         CylinderCollisionShape paddleShape = new CylinderCollisionShape(
                 new Vector3f(radius, COLLISION_HALF_HEIGHT, radius), 1);
         paddlePhysics = new RigidBodyControl(paddleShape, 20.0f);
         paddleNode.addControl(paddlePhysics);
         bulletAppState.getPhysicsSpace().add(paddlePhysics);
+
         paddlePhysics.setKinematic(true);
         paddlePhysics.setGravity(Vector3f.ZERO);
         paddlePhysics.setAngularFactor(0f);
         paddlePhysics.setFriction(0f);
         paddlePhysics.setRestitution(1.0f);
-        paddlePhysics.setCcdMotionThreshold(0.005f);
+        paddlePhysics.setCcdMotionThreshold(1f);
         paddlePhysics.setCcdSweptSphereRadius(radius * 0.9f);
         paddlePhysics.setPhysicsLocation(position);
     }
@@ -84,10 +84,12 @@ public class Paddle {
         if (!(model.getWorldBound() instanceof BoundingBox bounds)) {
             return 1f;
         }
+
         float sourceRadius = Math.max(bounds.getXExtent(), bounds.getZExtent());
         if (sourceRadius <= 0.0001f) {
             return 1f;
         }
+
         float scale = targetRadius / sourceRadius;
         model.setLocalScale(scale);
         return scale;
@@ -98,6 +100,7 @@ public class Paddle {
         if (parent != null) {
             parent.detachChild(model);
         }
+
         model.setLocalTranslation(0f, 0f, 0f);
         model.updateGeometricState();
 

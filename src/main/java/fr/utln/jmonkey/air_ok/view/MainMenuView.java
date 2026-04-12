@@ -14,11 +14,10 @@ import com.jme3.scene.shape.Quad;
 
 public class MainMenuView {
     private static final String MATERIAL_COLOR_PARAM = "Color";
-    private static final ColorRGBA OPTION_TEXT_FRAME_COLOR = new ColorRGBA(0.78f, 0.86f, 0.97f, 0.52f);
-    private static final ColorRGBA OPTION_TEXT_FRAME_SELECTED_COLOR = new ColorRGBA(1f, 0.90f, 0.62f, 0.76f);
+    private static final ColorRGBA OPTION_TEXT_FRAME_COLOR = new ColorRGBA(0.12f, 0.16f, 0.22f, 0.88f);
+    private static final ColorRGBA OPTION_TEXT_FRAME_SELECTED_COLOR = new ColorRGBA(0.22f, 0.30f, 0.42f, 0.96f);
     private static final ColorRGBA OPTION_TEXT_COLOR = new ColorRGBA(0.93f, 0.96f, 1f, 1f);
     private static final ColorRGBA OPTION_SELECTED_TEXT_COLOR = new ColorRGBA(1f, 0.98f, 0.90f, 1f);
-
     private final Node rootNode;
     private final Geometry[] optionTextFrames;
     private final BitmapText[] optionTexts;

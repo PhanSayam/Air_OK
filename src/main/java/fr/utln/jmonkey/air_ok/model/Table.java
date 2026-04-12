@@ -22,18 +22,12 @@ import com.jme3.texture.Texture;
 
 public class Table {
 
-    private static final float MODEL_SCALE = 0.01f;
-    private static final float LEGACY_TABLE_WIDTH = 20f;
-    private static final float LEGACY_TABLE_LENGTH = 30f;
     private static final float GOAL_WIDTH_RATIO = 6f / 20f;
-    private static final float LEGACY_CENTER_NEUTRAL_RATIO = 2.2f / 30f;
+
     private static final float FALLBACK_WIDTH = 20f;
     private static final float FALLBACK_LENGTH = 30f;
-    private static final float FLOOR_HALF_HEIGHT_LEGACY = 0.10f;
-    private static final float SIDE_WALL_HALF_THICKNESS_LEGACY = 1.0f;
-    private static final float SIDE_WALL_HALF_HEIGHT_LEGACY = 2.5f;
-    private static final float END_BORDER_HALF_THICKNESS_LEGACY = 1.0f;
-    private static final float WALL_CENTER_Y_LEGACY = 0.4f;
+    private static final float FLOOR_HALF_HEIGHT = 0.10f;
+    private static final float CENTER_NEUTRAL_HALF_DEPTH = 352f;
 
     private final AssetManager assetManager;
     private final Node rootNode;
@@ -47,7 +41,6 @@ public class Table {
     private float width = FALLBACK_WIDTH;
     private float length = FALLBACK_LENGTH;
     private float goalWidth = FALLBACK_WIDTH * GOAL_WIDTH_RATIO;
-    private float centerNeutralHalfDepth = FALLBACK_LENGTH * LEGACY_CENTER_NEUTRAL_RATIO;
 
     public Table(AssetManager assetManager, Node rootNode, BulletAppState bulletAppState) {
         this.assetManager = assetManager;
@@ -61,26 +54,25 @@ public class Table {
         Node arenaNode = new Node("ArenaModelNode");
         rootNode.attachChild(arenaNode);
 
-        Spatial tableModel = attachScaledModel(arenaNode, "Models/table.glb", "TableModel");
-        leftWallModel = attachScaledModel(arenaNode, "Models/wall1.glb", "LeftWallModel");
-        rightWallModel = attachScaledModel(arenaNode, "Models/wall2.glb", "RightWallModel");
+        Spatial tableModel = attachModel(arenaNode, "Models/table.glb", "TableModel");
+        leftWallModel = attachModel(arenaNode, "Models/wall1.glb", "LeftWallModel");
+        rightWallModel = attachModel(arenaNode, "Models/wall2.glb", "RightWallModel");
+        topDecorModel = attachModel(arenaNode, "Models/top.glb", "TopDecorModel");
+        bottomDecorModel = attachModel(arenaNode, "Models/bottom.glb", "BottomDecorModel");
 
-        topDecorModel = attachScaledModel(arenaNode, "Models/top.glb", "TopDecorModel");
-        bottomDecorModel = attachScaledModel(arenaNode, "Models/bottom.glb", "BottomDecorModel");
-
-        for (Spatial s : new Spatial[]{tableModel, leftWallModel, rightWallModel, topDecorModel, bottomDecorModel}) {
+        for (Spatial s : new Spatial[] { tableModel, leftWallModel, rightWallModel, topDecorModel, bottomDecorModel }) {
             makeGlbVisible(s);
         }
 
         alignArenaOnPlayPlane(arenaNode, tableModel);
         updateDimensionsFromTableModel(tableModel);
+
         addGameplayColliders();
     }
 
-    private Spatial attachScaledModel(Node parent, String modelPath, String spatialName) {
+    private Spatial attachModel(Node parent, String modelPath, String spatialName) {
         Spatial model = assetManager.loadModel(modelPath);
         model.setName(spatialName);
-        model.setLocalScale(MODEL_SCALE);
         parent.attachChild(model);
         return model;
     }
@@ -108,7 +100,6 @@ public class Table {
         width = tableBounds.getXExtent() * 2f;
         length = tableBounds.getZExtent() * 2f;
         goalWidth = width * GOAL_WIDTH_RATIO;
-        centerNeutralHalfDepth = length * LEGACY_CENTER_NEUTRAL_RATIO;
     }
 
     private BoundingBox getBounds(Spatial spatial) {
@@ -120,45 +111,13 @@ public class Table {
     }
 
     private void addGameplayColliders() {
-        // Flat floor: a simple box is exact.
-        float floorHalfHeight = scaleLength(FLOOR_HALF_HEIGHT_LEGACY);
         addStaticBoxCollider(
                 "tableFloorCollider",
-                new Vector3f(width / 2f, floorHalfHeight, length / 2f),
-                new Vector3f(0f, -floorHalfHeight, 0f));
+                new Vector3f(width / 2f, FLOOR_HALF_HEIGHT, length / 2f),
+                new Vector3f(0f, -FLOOR_HALF_HEIGHT, 0f));
 
-        // Side walls: use the actual mesh geometry so the rounded corners at each
-        // end of the wall are matched precisely. Top/bottom decorative models are
-        // intentionally left without a physics body (they only frame the goal area).
         addStaticMeshCollider(leftWallModel);
         addStaticMeshCollider(rightWallModel);
-
-        // End walls: two box segments per end, one on each side of the goal opening.
-        // Box colliders are safe here because the puck cannot get trapped in them.
-        float wallHalfThickness = scaleWidth(SIDE_WALL_HALF_THICKNESS_LEGACY);
-        float wallHalfHeight = scaleLength(SIDE_WALL_HALF_HEIGHT_LEGACY);
-        float wallCenterY = scaleLength(WALL_CENTER_Y_LEGACY);
-        float endBorderHalfThickness = scaleLength(END_BORDER_HALF_THICKNESS_LEGACY);
-        float sideSegmentHalf = (width - goalWidth) / 4f + wallHalfThickness / 2f;
-        float sideSegmentOffset = goalWidth / 2f + sideSegmentHalf;
-        float endSegmentZ = length / 2f + endBorderHalfThickness;
-
-        addStaticBoxCollider(
-                "topLeftGoalSegmentCollider",
-                new Vector3f(sideSegmentHalf, wallHalfHeight, endBorderHalfThickness),
-                new Vector3f(-sideSegmentOffset, wallCenterY, endSegmentZ));
-        addStaticBoxCollider(
-                "topRightGoalSegmentCollider",
-                new Vector3f(sideSegmentHalf, wallHalfHeight, endBorderHalfThickness),
-                new Vector3f(sideSegmentOffset, wallCenterY, endSegmentZ));
-        addStaticBoxCollider(
-                "bottomLeftGoalSegmentCollider",
-                new Vector3f(sideSegmentHalf, wallHalfHeight, endBorderHalfThickness),
-                new Vector3f(-sideSegmentOffset, wallCenterY, -endSegmentZ));
-        addStaticBoxCollider(
-                "bottomRightGoalSegmentCollider",
-                new Vector3f(sideSegmentHalf, wallHalfHeight, endBorderHalfThickness),
-                new Vector3f(sideSegmentOffset, wallCenterY, -endSegmentZ));
     }
 
     private void addStaticMeshCollider(Spatial model) {
@@ -184,14 +143,6 @@ public class Table {
         physicsControl.setFriction(0f);
     }
 
-    private float scaleWidth(float legacyValue) {
-        return legacyValue * (width / LEGACY_TABLE_WIDTH);
-    }
-
-    private float scaleLength(float legacyValue) {
-        return legacyValue * (length / LEGACY_TABLE_LENGTH);
-    }
-
     /**
      * Replaces GLTF/PBR materials with Unshaded materials, extracting the
      * embedded texture or base colour so the model is always visible regardless
@@ -207,6 +158,7 @@ public class Table {
                 if (src != null) {
                     Object texVal = src.getParamValue("BaseColorMap");
                     Object colVal = src.getParamValue("BaseColor");
+
                     if (texVal instanceof Texture) {
                         dst.setTexture("ColorMap", (Texture) texVal);
                     } else if (colVal instanceof ColorRGBA) {
@@ -257,6 +209,6 @@ public class Table {
     }
 
     public float getCenterNeutralHalfDepth() {
-        return centerNeutralHalfDepth;
+        return CENTER_NEUTRAL_HALF_DEPTH;
     }
 }
