@@ -2,8 +2,6 @@ package fr.utln.jmonkey.air_ok;
 
 import com.jme3.app.SimpleApplication;
 import com.jme3.system.AppSettings;
-import com.simsilica.lemur.GuiGlobals;
-import com.simsilica.lemur.style.BaseStyles;
 
 import fr.utln.jmonkey.air_ok.controller.states.MainMenuState;
 
@@ -21,14 +19,14 @@ public class MainGameApp extends SimpleApplication {
 
     @Override
     public void simpleInitApp() {
-        GuiGlobals.initialize(this);
+        // Disable jME default ESC->exit mapping to let states handle ESC behavior.
+        if (inputManager.hasMapping("SIMPLEAPP_Exit")) {
+            inputManager.deleteMapping("SIMPLEAPP_Exit");
+        }
 
         MainMenuState menuState = new MainMenuState();
 
         stateManager.attach(menuState);
-
-        BaseStyles.loadGlassStyle();
-        GuiGlobals.getInstance().getStyles().setDefaultStyle("glass");
 
         // desactiver l'overlay
         setDisplayStatView(false);

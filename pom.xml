@@ -57,11 +57,6 @@
             <version>${jme3_v}</version>
         </dependency>
         <dependency>
-            <groupId>com.simsilica</groupId>
-            <artifactId>lemur</artifactId>
-            <version>1.16.0</version>
-        </dependency>
-        <dependency>
             <groupId>org.apache.groovy</groupId>
             <artifactId>groovy-jsr223</artifactId>
             <version>5.0.0</version>
