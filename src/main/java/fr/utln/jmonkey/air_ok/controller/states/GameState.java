@@ -276,6 +276,7 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
             leftCamera.lookAt(new Vector3f(0, 0, 0), Vector3f.UNIT_Y);
             leftPlayerViewPort = simpleApp.getRenderManager().createMainView("LeftPlayerView", leftCamera);
             leftPlayerViewPort.setClearFlags(true, true, true);
+            leftPlayerViewPort.setBackgroundColor(new ColorRGBA(0.12f, 0.16f, 0.22f, 1f));
             leftPlayerViewPort.attachScene(gameNode);
 
             Camera rightCamera = simpleApp.getCamera().clone();
@@ -285,9 +286,11 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
             rightCamera.lookAt(new Vector3f(0, 0, 0), Vector3f.UNIT_Y);
             rightPlayerViewPort = simpleApp.getRenderManager().createMainView("RightPlayerView", rightCamera);
             rightPlayerViewPort.setClearFlags(true, true, true);
+            rightPlayerViewPort.setBackgroundColor(new ColorRGBA(0.12f, 0.16f, 0.22f, 1f));
             rightPlayerViewPort.attachScene(gameNode);
         } else {
             simpleApp.getViewPort().setEnabled(true);
+            simpleApp.getViewPort().setBackgroundColor(new ColorRGBA(0.12f, 0.16f, 0.22f, 1f));
             simpleApp.getCamera().setLocation(new Vector3f(0, 30f, 30f));
             simpleApp.getCamera().lookAt(new Vector3f(0, 0, 0), Vector3f.UNIT_Y);
         }
