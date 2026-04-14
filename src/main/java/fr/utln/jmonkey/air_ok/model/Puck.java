@@ -102,10 +102,12 @@ public class Puck {
                 if (src != null) {
                     Object texVal = src.getParamValue("BaseColorMap");
                     Object colVal = src.getParamValue("BaseColor");
-                    if (texVal instanceof Texture) {
-                        dst.setTexture("ColorMap", (Texture) texVal);
-                    } else if (colVal instanceof ColorRGBA) {
-                        dst.setColor("Color", (ColorRGBA) colVal);
+                    if (texVal instanceof Texture t) {
+                        dst.setTexture("ColorMap", t);
+                    } else if (colVal instanceof ColorRGBA c) {
+                        // Use the exact BaseColor from the GLB — no brightness clamping so
+                        // the puck keeps its original designed colour.
+                        dst.setColor("Color", c);
                     } else {
                         dst.setColor("Color", new ColorRGBA(0.7f, 0.7f, 0.7f, 1f));
                     }

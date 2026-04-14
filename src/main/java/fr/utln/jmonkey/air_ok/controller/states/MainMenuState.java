@@ -205,11 +205,11 @@ public class MainMenuState extends BaseAppState {
         menuPreviewPuck.initPuck();
 
         menuPreviewNearPaddle = new Paddle(app.getAssetManager(), menuPreviewNode, menuPreviewBulletAppState,
-                new Vector3f(0f, PREVIEW_TABLE_PLANE_Y, getPreviewStartZ(true)), ColorRGBA.Cyan);
+                new Vector3f(0f, PREVIEW_TABLE_PLANE_Y, getPreviewStartZ(true)), ColorRGBA.Red);
         menuPreviewNearPaddle.initPaddle();
 
         menuPreviewFarPaddle = new Paddle(app.getAssetManager(), menuPreviewNode, menuPreviewBulletAppState,
-                new Vector3f(0f, PREVIEW_TABLE_PLANE_Y, getPreviewStartZ(false)), ColorRGBA.Green);
+                new Vector3f(0f, PREVIEW_TABLE_PLANE_Y, getPreviewStartZ(false)), ColorRGBA.Blue);
         menuPreviewFarPaddle.initPaddle();
 
         previewServeCooldownSeconds = 0f;
@@ -397,7 +397,7 @@ public class MainMenuState extends BaseAppState {
 
     private void setupMenuCamera() {
         app.getViewPort().setEnabled(true);
-        app.getViewPort().setBackgroundColor(new ColorRGBA(0.75f, 0.78f, 0.85f, 1f));
+        app.getViewPort().setBackgroundColor(new ColorRGBA(0.12f, 0.16f, 0.22f, 1f));
         app.getCamera().setFrustumPerspective(
                 45f,
                 (float) app.getCamera().getWidth() / app.getCamera().getHeight(),

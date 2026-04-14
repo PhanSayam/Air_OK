@@ -14,6 +14,7 @@ import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.SceneGraphVisitorAdapter;
@@ -60,9 +61,14 @@ public class Table {
         topDecorModel = attachModel(arenaNode, "Models/top.glb", "TopDecorModel");
         bottomDecorModel = attachModel(arenaNode, "Models/bottom.glb", "BottomDecorModel");
 
-        for (Spatial s : new Spatial[] { tableModel, leftWallModel, rightWallModel, topDecorModel, bottomDecorModel }) {
-            makeGlbVisible(s);
-        }
+        // Table surface and bottom use their GLB colour/texture.
+        makeGlbVisible(tableModel);
+        makeGlbVisible(bottomDecorModel);
+
+        // Walls and top border are intentionally black regardless of GLB material.
+        paintModelColor(leftWallModel, ColorRGBA.Black);
+        paintModelColor(rightWallModel, ColorRGBA.Black);
+        paintModelColor(topDecorModel, ColorRGBA.Black);
 
         alignArenaOnPlayPlane(arenaNode, tableModel);
         updateDimensionsFromTableModel(tableModel);
@@ -143,35 +149,72 @@ public class Table {
         physicsControl.setFriction(0f);
     }
 
-    /**
-     * Replaces GLTF/PBR materials with Unshaded materials, extracting the
-     * embedded texture or base colour so the model is always visible regardless
-     * of lighting setup or face-normal orientation.
-     */
+    private void paintModelColor(Spatial model, ColorRGBA color) {
+        model.depthFirstTraversal(new SceneGraphVisitorAdapter() {
+            @Override
+            public void visit(Geometry geom) {
+                Material mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+                mat.setColor("Color", color);
+                mat.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
+                geom.setMaterial(mat);
+            }
+        });
+    }
+
     private void makeGlbVisible(Spatial model) {
         model.depthFirstTraversal(new SceneGraphVisitorAdapter() {
             @Override
             public void visit(Geometry geom) {
                 Material src = geom.getMaterial();
+
+                // ── DEBUG (temporary) ─────────────────────────────────────────────────
+                // Print what the GLTF loader actually put on this geometry so we can
+                // verify the correct parameter names and texture presence.
+                if (src != null) {
+                    System.out.println("[GLB] geom='" + geom.getName()
+                            + "'  matDef='" + src.getMaterialDef().getName() + "'"
+                            + "  BaseColorMap=" + src.getParamValue("BaseColorMap")
+                            + "  BaseColor=" + src.getParamValue("BaseColor"));
+                }
+                // ─────────────────────────────────────────────────────────────────────
+
+                // Use Unshaded so the result is independent of light positions and the
+                // material's ambient response — eliminating the Lighting.j3md black-face
+                // problem where ambient = 0 when UseMaterialColors is not set.
                 Material dst = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
 
+                Texture baseColorTexture = null;
                 if (src != null) {
                     Object texVal = src.getParamValue("BaseColorMap");
-                    Object colVal = src.getParamValue("BaseColor");
-
-                    if (texVal instanceof Texture) {
-                        dst.setTexture("ColorMap", (Texture) texVal);
-                    } else if (colVal instanceof ColorRGBA) {
-                        dst.setColor("Color", (ColorRGBA) colVal);
-                    } else {
-                        dst.setColor("Color", new ColorRGBA(0.7f, 0.7f, 0.7f, 1f));
+                    if (texVal instanceof Texture t) {
+                        baseColorTexture = t;
                     }
+                }
+
+                if (baseColorTexture != null) {
+                    dst.setTexture("ColorMap", baseColorTexture);
                 } else {
-                    dst.setColor("Color", new ColorRGBA(0.7f, 0.7f, 0.7f, 1f));
+                    // No embedded texture: use the PBR base-colour factor, clamped to a
+                    // minimum brightness so metallic models (BaseColor ≈ black) stay visible.
+                    ColorRGBA color = new ColorRGBA(0.7f, 0.7f, 0.7f, 1f);
+                    if (src != null) {
+                        Object colVal = src.getParamValue("BaseColor");
+                        if (colVal instanceof ColorRGBA c) {
+                            final float minBrightness = 0.4f;
+                            color = new ColorRGBA(
+                                    Math.max(minBrightness, c.r),
+                                    Math.max(minBrightness, c.g),
+                                    Math.max(minBrightness, c.b),
+                                    c.a);
+                        }
+                    }
+                    dst.setColor("Color", color);
                 }
 
                 dst.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
                 geom.setMaterial(dst);
+
+                geom.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
             }
         });
     }

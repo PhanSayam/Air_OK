@@ -30,10 +30,11 @@ public class PowerUp {
         }
     }
 
-    private static final float HALF_HEIGHT = 0.08f;
-    private static final float RADIUS = 0.55f;
-    // Assuming Puck.HALF_HEIGHT is accessible, e.g., 0.25f
-    private static final float POSITION_Y = 0.25f + HALF_HEIGHT;
+    // Disc dimensions must match the game's unit scale (puck radius ≈ 80, half-height ≈ 25).
+    private static final float DISC_HALF_HEIGHT = 10f;
+    private static final float DISC_RADIUS = 55f;
+    // Bob amplitude in game units (Puck.HALF_HEIGHT = 25, so 6 is a modest float).
+    private static final float BOB_AMPLITUDE = 6f;
 
     private final Type type;
     private final Vector3f position;
@@ -44,7 +45,8 @@ public class PowerUp {
 
     public PowerUp(Type type, Vector3f position, AssetManager assetManager) {
         this.type = type;
-        this.position = new Vector3f(position.x, POSITION_Y, position.z);
+        // Use the spawn Y from the manager (tablePlaneY) — do not override with a hardcoded value.
+        this.position = position.clone();
         this.powerUpNode = createVisual(assetManager);
         this.powerUpNode.setLocalTranslation(this.position);
 
@@ -55,7 +57,7 @@ public class PowerUp {
     private Node createVisual(AssetManager assetManager) {
         Node node = new Node("PowerUp_" + type.name());
 
-        Cylinder body = new Cylinder(16, 24, RADIUS, HALF_HEIGHT * 2f, true);
+        Cylinder body = new Cylinder(16, 24, DISC_RADIUS, DISC_HALF_HEIGHT * 2f, true);
         Geometry bodyGeo = new Geometry("PowerUpBody", body);
         Material bodyMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
         bodyMat.setColor("Color", getColor(type));
@@ -63,14 +65,14 @@ public class PowerUp {
         // Rotate flat to lie on the table
         bodyGeo.rotate(FastMath.HALF_PI, 0f, 0f);
 
-        Cylinder ring = new Cylinder(16, 24, RADIUS * 0.65f, HALF_HEIGHT * 0.6f, true);
+        Cylinder ring = new Cylinder(16, 24, DISC_RADIUS * 0.65f, DISC_HALF_HEIGHT * 0.6f, true);
         Geometry ringGeo = new Geometry("PowerUpRing", ring);
         Material ringMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
         ringMat.setColor("Color", ColorRGBA.White);
         ringGeo.setMaterial(ringMat);
         // Rotate flat and move slightly up to sit inside the body
         ringGeo.rotate(FastMath.HALF_PI, 0f, 0f);
-        ringGeo.setLocalTranslation(0f, HALF_HEIGHT * 0.45f, 0f);
+        ringGeo.setLocalTranslation(0f, DISC_HALF_HEIGHT * 0.45f, 0f);
 
         node.attachChild(bodyGeo);
         node.attachChild(ringGeo);
@@ -99,8 +101,8 @@ public class PowerUp {
         powerUpNode.rotate(0f, 2.5f * tpf, 0f);
 
         // Bob up and down using a Sine wave
-        float floatOffset = FastMath.sin(timeOffset * 4f) * 0.05f;
-        powerUpNode.setLocalTranslation(position.x, POSITION_Y + floatOffset, position.z);
+        float floatOffset = FastMath.sin(timeOffset * 4f) * BOB_AMPLITUDE;
+        powerUpNode.setLocalTranslation(position.x, position.y + floatOffset, position.z);
     }
 
     public void attachTo(Node parentNode) {
@@ -116,7 +118,7 @@ public class PowerUp {
     }
 
     public float getRadius() {
-        return RADIUS;
+        return DISC_RADIUS;
     }
 
     public Vector3f getPosition() {

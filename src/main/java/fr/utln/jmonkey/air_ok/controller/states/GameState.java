@@ -118,7 +118,7 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
                 gameNode,
                 bulletAppState,
                 new Vector3f(0f, TABLE_PLANE_Y, getPlayerStartZ(Side.PLAYER_ONE)),
-                ColorRGBA.Cyan);
+                ColorRGBA.Red);
         playerOnePaddle.initPaddle();
 
         if (gameMode == GameMode.SINGLE_PLAYER) {
@@ -127,7 +127,7 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
                     gameNode,
                     bulletAppState,
                     new Vector3f(0f, TABLE_PLANE_Y, getPlayerStartZ(Side.PLAYER_TWO)),
-                    ColorRGBA.Orange);
+                    ColorRGBA.Blue);
             aiPaddle.initPaddle();
         } else {
             playerTwoPaddle = new Paddle(
@@ -135,7 +135,7 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
                     gameNode,
                     bulletAppState,
                     new Vector3f(0f, TABLE_PLANE_Y, getPlayerStartZ(Side.PLAYER_TWO)),
-                    ColorRGBA.Green);
+                    ColorRGBA.Blue);
             playerTwoPaddle.initPaddle();
         }
 
