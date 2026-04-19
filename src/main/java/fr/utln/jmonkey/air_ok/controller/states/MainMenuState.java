@@ -12,6 +12,7 @@ import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Node;
+import com.jme3.shadow.DirectionalLightShadowRenderer;
 
 import java.util.Random;
 
@@ -59,6 +60,7 @@ public class MainMenuState extends BaseAppState {
     private float selectionPulseTimer;
     private float previewServeCooldownSeconds;
     private float previewStuckTimerSeconds;
+    private DirectionalLightShadowRenderer menuShadowRenderer;
 
     private final Random random = new Random();
 
@@ -200,6 +202,7 @@ public class MainMenuState extends BaseAppState {
 
         menuPreviewTable = new Table(app.getAssetManager(), menuPreviewNode, menuPreviewBulletAppState);
         menuPreviewTable.initTable();
+        setupMenuShadows();
 
         menuPreviewPuck = new Puck(app.getAssetManager(), menuPreviewNode, menuPreviewBulletAppState);
         menuPreviewPuck.initPuck();
@@ -395,6 +398,16 @@ public class MainMenuState extends BaseAppState {
         return PREVIEW_SERVE_SPREAD_X;
     }
 
+    private void setupMenuShadows() {
+        com.jme3.light.DirectionalLight keyLight = menuPreviewTable.getShadowKeyLight();
+        if (keyLight == null) return;
+
+        menuShadowRenderer = new DirectionalLightShadowRenderer(app.getAssetManager(), 2048, 3);
+        menuShadowRenderer.setLight(keyLight);
+        menuShadowRenderer.setShadowIntensity(0.55f);
+        app.getViewPort().addProcessor(menuShadowRenderer);
+    }
+
     private void setupMenuCamera() {
         app.getViewPort().setEnabled(true);
         app.getViewPort().setBackgroundColor(new ColorRGBA(0.12f, 0.16f, 0.22f, 1f));
@@ -445,6 +458,11 @@ public class MainMenuState extends BaseAppState {
             getStateManager().detach(menuPreviewBulletAppState);
         }
         menuPreviewBulletAppState = null;
+
+        if (menuShadowRenderer != null) {
+            app.getViewPort().removeProcessor(menuShadowRenderer);
+            menuShadowRenderer = null;
+        }
     }
 
     @Override
