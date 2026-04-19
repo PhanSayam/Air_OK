@@ -130,10 +130,15 @@ public class Paddle {
         model.depthFirstTraversal(new SceneGraphVisitorAdapter() {
             @Override
             public void visit(Geometry geom) {
-                Material mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-                mat.setColor("Color", playerColor);
+                Material mat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+                mat.setBoolean("UseMaterialColors", true);
+                mat.setColor("Ambient",  playerColor.mult(0.25f));
+                mat.setColor("Diffuse",  playerColor);
+                mat.setColor("Specular", new ColorRGBA(0.8f, 0.8f, 0.8f, 1f));
+                mat.setFloat("Shininess", 64f);
                 mat.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
                 geom.setMaterial(mat);
+                geom.setShadowMode(com.jme3.renderer.queue.RenderQueue.ShadowMode.CastAndReceive);
             }
         });
     }

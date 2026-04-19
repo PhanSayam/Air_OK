@@ -42,6 +42,7 @@ public class Table {
     private float width = FALLBACK_WIDTH;
     private float length = FALLBACK_LENGTH;
     private float goalWidth = FALLBACK_WIDTH * GOAL_WIDTH_RATIO;
+    private DirectionalLight shadowKeyLight;
 
     public Table(AssetManager assetManager, Node rootNode, BulletAppState bulletAppState) {
         this.assetManager = assetManager;
@@ -153,10 +154,15 @@ public class Table {
         model.depthFirstTraversal(new SceneGraphVisitorAdapter() {
             @Override
             public void visit(Geometry geom) {
-                Material mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-                mat.setColor("Color", color);
+                Material mat = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+                mat.setBoolean("UseMaterialColors", true);
+                mat.setColor("Ambient",  color.mult(0.3f));
+                mat.setColor("Diffuse",  color);
+                mat.setColor("Specular", new ColorRGBA(0.2f, 0.2f, 0.2f, 1f));
+                mat.setFloat("Shininess", 16f);
                 mat.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
                 geom.setMaterial(mat);
+                geom.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
             }
         });
     }
@@ -166,21 +172,6 @@ public class Table {
             @Override
             public void visit(Geometry geom) {
                 Material src = geom.getMaterial();
-
-                // ── DEBUG (temporary) ─────────────────────────────────────────────────
-                // Print what the GLTF loader actually put on this geometry so we can
-                // verify the correct parameter names and texture presence.
-                if (src != null) {
-                    System.out.println("[GLB] geom='" + geom.getName()
-                            + "'  matDef='" + src.getMaterialDef().getName() + "'"
-                            + "  BaseColorMap=" + src.getParamValue("BaseColorMap")
-                            + "  BaseColor=" + src.getParamValue("BaseColor"));
-                }
-                // ─────────────────────────────────────────────────────────────────────
-
-                // Use Unshaded so the result is independent of light positions and the
-                // material's ambient response — eliminating the Lighting.j3md black-face
-                // problem where ambient = 0 when UseMaterialColors is not set.
                 Material dst = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
 
                 Texture baseColorTexture = null;
@@ -194,8 +185,6 @@ public class Table {
                 if (baseColorTexture != null) {
                     dst.setTexture("ColorMap", baseColorTexture);
                 } else {
-                    // No embedded texture: use the PBR base-colour factor, clamped to a
-                    // minimum brightness so metallic models (BaseColor ≈ black) stay visible.
                     ColorRGBA color = new ColorRGBA(0.7f, 0.7f, 0.7f, 1f);
                     if (src != null) {
                         Object colVal = src.getParamValue("BaseColor");
@@ -213,7 +202,6 @@ public class Table {
 
                 dst.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
                 geom.setMaterial(dst);
-
                 geom.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
             }
         });
@@ -228,6 +216,7 @@ public class Table {
         keyLight.setDirection(new Vector3f(-0.5f, -1f, -0.25f).normalizeLocal());
         keyLight.setColor(new ColorRGBA(0.72f, 0.76f, 0.84f, 1f));
         rootNode.addLight(keyLight);
+        this.shadowKeyLight = keyLight;
 
         SpotLight overheadLight = new SpotLight();
         overheadLight.setColor(new ColorRGBA(2.2f, 2.1f, 2.0f, 1f));
@@ -245,6 +234,10 @@ public class Table {
 
     public float getLength() {
         return length;
+    }
+
+    public DirectionalLight getShadowKeyLight() {
+        return shadowKeyLight;
     }
 
     public float getGoalWidth() {

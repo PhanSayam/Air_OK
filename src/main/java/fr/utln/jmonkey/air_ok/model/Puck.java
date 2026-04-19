@@ -97,26 +97,23 @@ public class Puck {
             @Override
             public void visit(Geometry geom) {
                 Material src = geom.getMaterial();
-                Material dst = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+                Material dst = new Material(assetManager, "Common/MatDefs/Light/PBRLighting.j3md");
 
                 if (src != null) {
                     Object texVal = src.getParamValue("BaseColorMap");
                     Object colVal = src.getParamValue("BaseColor");
                     if (texVal instanceof Texture t) {
-                        dst.setTexture("ColorMap", t);
+                        dst.setTexture("BaseColorMap", t);
                     } else if (colVal instanceof ColorRGBA c) {
-                        // Use the exact BaseColor from the GLB — no brightness clamping so
-                        // the puck keeps its original designed colour.
-                        dst.setColor("Color", c);
-                    } else {
-                        dst.setColor("Color", new ColorRGBA(0.7f, 0.7f, 0.7f, 1f));
+                        dst.setColor("BaseColor", c);
                     }
-                } else {
-                    dst.setColor("Color", new ColorRGBA(0.7f, 0.7f, 0.7f, 1f));
                 }
+                dst.setFloat("Metallic",  0.5f);
+                dst.setFloat("Roughness", 0.3f);
 
                 dst.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
                 geom.setMaterial(dst);
+                geom.setShadowMode(com.jme3.renderer.queue.RenderQueue.ShadowMode.CastAndReceive);
             }
         });
     }

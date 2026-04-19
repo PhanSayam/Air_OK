@@ -18,6 +18,7 @@ import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Node;
+import com.jme3.shadow.DirectionalLightShadowRenderer;
 
 import java.util.Random;
 
@@ -109,6 +110,7 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
 
         table = new Table(simpleApp.getAssetManager(), gameNode, bulletAppState);
         table.initTable();
+        setupShadows();
 
         puck = new Puck(simpleApp.getAssetManager(), gameNode, bulletAppState);
         puck.initPuck();
@@ -207,6 +209,31 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
         gameFinished = true;
         getStateManager().detach(this);
         getStateManager().attach(new MainMenuState());
+    }
+
+    private void setupShadows() {
+        com.jme3.light.DirectionalLight keyLight = table.getShadowKeyLight();
+        if (keyLight == null) return;
+
+        if (gameMode == GameMode.TWO_PLAYER) {
+            DirectionalLightShadowRenderer dlsr1 = new DirectionalLightShadowRenderer(
+                    simpleApp.getAssetManager(), 2048, 3);
+            dlsr1.setLight(keyLight);
+            dlsr1.setShadowIntensity(0.55f);
+            leftPlayerViewPort.addProcessor(dlsr1);
+
+            DirectionalLightShadowRenderer dlsr2 = new DirectionalLightShadowRenderer(
+                    simpleApp.getAssetManager(), 2048, 3);
+            dlsr2.setLight(keyLight);
+            dlsr2.setShadowIntensity(0.55f);
+            rightPlayerViewPort.addProcessor(dlsr2);
+        } else {
+            DirectionalLightShadowRenderer dlsr = new DirectionalLightShadowRenderer(
+                    simpleApp.getAssetManager(), 2048, 3);
+            dlsr.setLight(keyLight);
+            dlsr.setShadowIntensity(0.55f);
+            simpleApp.getViewPort().addProcessor(dlsr);
+        }
     }
 
     private void setupCameras() {
