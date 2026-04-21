@@ -20,9 +20,13 @@ import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Node;
 import com.jme3.shadow.DirectionalLightShadowRenderer;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import fr.utln.jmonkey.air_ok.controller.physics.PaddleController;
+import fr.utln.jmonkey.air_ok.replay.ReplayFrame;
 import fr.utln.jmonkey.air_ok.controller.powerup.PowerUpManager;
 import fr.utln.jmonkey.air_ok.model.Paddle;
 import fr.utln.jmonkey.air_ok.model.Player;
@@ -106,6 +110,22 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
     private PowerUpManager powerUpManager;
 
     private ActionListener appInputListener;
+
+    // --------------- Replay buffer -------------------------------------------
+
+    private static final int   REPLAY_MAX_FRAMES =
+            (int) (KillCamState.REPLAY_BUFFER_SECONDS * 60f);
+    /** Minimum gap (s) between two recorded bounces to avoid duplicate collision events. */
+    private static final float BOUNCE_MIN_INTERVAL = 0.12f;
+    /** How many past bounce timestamps to keep for trimming the kill-cam window. */
+    private static final int   BOUNCE_HISTORY = 6;
+    /** Kill-cam replays from this many bounces before the goal. */
+    private static final int   KILLCAM_BOUNCE_COUNT = 6;
+
+    private final ArrayDeque<ReplayFrame> replayBuffer      = new ArrayDeque<>();
+    private final ArrayDeque<Float>       bounceTimestamps  = new ArrayDeque<>();
+    private float replayRecordTimer = 0f;
+    private float gameTime          = 0f;
 
     // --------------- Constructors (keep backward compat) ---------------------
 
@@ -491,7 +511,6 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
 
     private void endGame(Player winner) {
         gameFinished = true;
-        startExchange(currentServer);
 
         String summary = winner.getName() + " gagne !  "
                 + playerOne.getName() + " : " + playerOne.getScore() + " | "
@@ -499,17 +518,28 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
 
         boolean playerOneWon = (winner == playerOne);
 
-        getStateManager().detach(this);
-
+        com.jme3.app.state.AppState nextState;
         if (config.tournament != null) {
             if (playerOneWon) {
                 config.tournament.advanceRound();
             }
-            getStateManager().attach(
-                    new TournamentInterstitialState(config.tournament, playerOneWon, summary));
+            nextState = new TournamentInterstitialState(config.tournament, playerOneWon, summary);
         } else {
-            getStateManager().attach(new EndScreenState(summary));
+            nextState = new EndScreenState(summary);
         }
+
+        Paddle p2 = (config.mode == GameMode.TWO_PLAYER) ? playerTwoPaddle : aiPaddle;
+
+        // Trim replay buffer to the last 3 bounces only
+        List<ReplayFrame> killCamFrames = buildKillCamFrames();
+
+        // KillCamState will detach this GameState once the replay finishes
+        getStateManager().attach(new KillCamState(
+                killCamFrames,
+                puck, playerOnePaddle, p2,
+                bulletAppState,
+                leftPlayerViewPort, rightPlayerViewPort,
+                this, nextState));
     }
 
     private void updateRallyStateAndStuckDetection(float tpf) {
@@ -605,6 +635,9 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
     public void update(float tpf) {
         super.update(tpf);
 
+        gameTime += tpf;
+        recordReplayFrame(tpf);
+
         if (gameFinished) {
             return;
         }
@@ -651,6 +684,17 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
             return;
         }
 
+        // Record every distinct bounce (paddle or wall) for kill-cam trimming
+        if (!gameFinished) {
+            float lastBounce = bounceTimestamps.isEmpty() ? -1f : bounceTimestamps.peekLast();
+            if (gameTime - lastBounce >= BOUNCE_MIN_INTERVAL) {
+                bounceTimestamps.addLast(gameTime);
+                while (bounceTimestamps.size() > BOUNCE_HISTORY) {
+                    bounceTimestamps.pollFirst();
+                }
+            }
+        }
+
         if (playerOnePaddle != null && other == playerOnePaddle.getPhysicsControl()) {
             lastTouchSide = Side.PLAYER_ONE;
             rallyInProgress = true;
@@ -681,6 +725,43 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
                     : paddleController.getAiPaddleVelocity();
 
             paddleController.applyShotPhysics(Side.PLAYER_TWO, sideTwoVelocity);
+        }
+    }
+
+    /** Returns frames from the 3rd-to-last bounce onwards (or all frames if fewer bounces). */
+    private List<ReplayFrame> buildKillCamFrames() {
+        List<ReplayFrame> all = new ArrayList<>(replayBuffer);
+        if (all.isEmpty()) return all;
+
+        float startTime = 0f;
+        if (bounceTimestamps.size() >= KILLCAM_BOUNCE_COUNT) {
+            Float[] bounces = bounceTimestamps.toArray(new Float[0]);
+            startTime = bounces[bounces.length - KILLCAM_BOUNCE_COUNT];
+        }
+
+        final float t = startTime;
+        int startIdx = 0;
+        for (int i = 0; i < all.size(); i++) {
+            if (all.get(i).timestamp >= t) {
+                startIdx = i;
+                break;
+            }
+        }
+        return new ArrayList<>(all.subList(startIdx, all.size()));
+    }
+
+    private void recordReplayFrame(float tpf) {
+        replayRecordTimer += tpf;
+        if (replayRecordTimer < 1f / 60f) return;
+        replayRecordTimer -= 1f / 60f;
+
+        Paddle p2 = (config.mode == GameMode.TWO_PLAYER) ? playerTwoPaddle : aiPaddle;
+        Vector3f p2Pos = (p2 != null) ? p2.getPosition() : Vector3f.ZERO;
+        replayBuffer.addLast(new ReplayFrame(
+                gameTime, puck.getPosition(), playerOnePaddle.getPosition(), p2Pos));
+
+        while (replayBuffer.size() > REPLAY_MAX_FRAMES) {
+            replayBuffer.pollFirst();
         }
     }
 
