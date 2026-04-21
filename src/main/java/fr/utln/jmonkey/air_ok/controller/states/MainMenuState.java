@@ -19,6 +19,7 @@ import java.util.Random;
 import fr.utln.jmonkey.air_ok.model.Paddle;
 import fr.utln.jmonkey.air_ok.model.Puck;
 import fr.utln.jmonkey.air_ok.model.Table;
+import fr.utln.jmonkey.air_ok.model.TournamentManager;
 import fr.utln.jmonkey.air_ok.view.MainMenuView;
 
 public class MainMenuState extends BaseAppState {
@@ -39,14 +40,20 @@ public class MainMenuState extends BaseAppState {
     private static final float PREVIEW_STRIKE_OFFSET = 120f;
     private static final float PREVIEW_START_Z = 1200f;
 
-    private static final String MENU_UP = "MainMenuUp";
-    private static final String MENU_DOWN = "MainMenuDown";
-    private static final String MENU_SELECT = "MainMenuSelect";
-    private static final String MENU_CLICK = "MainMenuClick";
-    private static final String MENU_SHORTCUT_ONE = "MainMenuShortcutOne";
-    private static final String MENU_SHORTCUT_TWO = "MainMenuShortcutTwo";
+    // Menu option indices
+    private static final int OPT_ONE_PLAYER  = 0;
+    private static final int OPT_TWO_PLAYER  = 1;
+    private static final int OPT_TOURNAMENT  = 2;
+    private static final int OPT_QUIT        = 3;
+
+    private static final String MENU_UP                  = "MainMenuUp";
+    private static final String MENU_DOWN                = "MainMenuDown";
+    private static final String MENU_SELECT              = "MainMenuSelect";
+    private static final String MENU_CLICK               = "MainMenuClick";
+    private static final String MENU_SHORTCUT_ONE        = "MainMenuShortcutOne";
+    private static final String MENU_SHORTCUT_TWO        = "MainMenuShortcutTwo";
     private static final String MENU_SHORTCUT_TOURNAMENT = "MainMenuShortcutTournament";
-    private static final String MENU_SHORTCUT_QUIT = "MainMenuShortcutQuit";
+    private static final String MENU_SHORTCUT_QUIT       = "MainMenuShortcutQuit";
 
     private SimpleApplication app;
     private MainMenuView view;
@@ -69,27 +76,22 @@ public class MainMenuState extends BaseAppState {
             return;
         }
 
-        if (MENU_UP.equals(name)) {
-            moveSelection(-1);
-        } else if (MENU_DOWN.equals(name)) {
-            moveSelection(1);
-        } else if (MENU_SELECT.equals(name)) {
-            activateSelection(selectedIndex);
-        } else if (MENU_CLICK.equals(name)) {
-            int hovered = view.pickOption(app.getInputManager().getCursorPosition());
-            if (hovered >= 0) {
-                selectedIndex = hovered;
-                view.setSelectedIndex(selectedIndex);
-                activateSelection(selectedIndex);
+        switch (name) {
+            case MENU_UP                  -> moveSelection(-1);
+            case MENU_DOWN                -> moveSelection(1);
+            case MENU_SELECT              -> activateSelection(selectedIndex);
+            case MENU_CLICK               -> {
+                int hovered = view.pickOption(app.getInputManager().getCursorPosition());
+                if (hovered >= 0) {
+                    selectedIndex = hovered;
+                    view.setSelectedIndex(selectedIndex);
+                    activateSelection(selectedIndex);
+                }
             }
-        } else if (MENU_SHORTCUT_ONE.equals(name)) {
-            activateSelection(0);
-        } else if (MENU_SHORTCUT_TWO.equals(name)) {
-            activateSelection(1);
-        } else if (MENU_SHORTCUT_TOURNAMENT.equals(name)) {
-            activateSelection(2);
-        } else if (MENU_SHORTCUT_QUIT.equals(name)) {
-            activateSelection(3);
+            case MENU_SHORTCUT_ONE        -> activateSelection(OPT_ONE_PLAYER);
+            case MENU_SHORTCUT_TWO        -> activateSelection(OPT_TWO_PLAYER);
+            case MENU_SHORTCUT_TOURNAMENT -> activateSelection(OPT_TOURNAMENT);
+            case MENU_SHORTCUT_QUIT       -> activateSelection(OPT_QUIT);
         }
     };
 
@@ -109,7 +111,6 @@ public class MainMenuState extends BaseAppState {
         updateHoverSelection();
         selectionPulseTimer += tpf;
         view.updateSelectionPulse(selectionPulseTimer);
-
         updateMenuPreviewMatch(tpf);
     }
 
@@ -133,12 +134,11 @@ public class MainMenuState extends BaseAppState {
 
     private void activateSelection(int optionIndex) {
         switch (optionIndex) {
-            case 0 -> startOnePlayerGame();
-            case 1 -> startTwoPlayerGame();
-            case 2 -> startTournament();
-            case 3 -> app.stop();
-            default -> {
-            }
+            case OPT_ONE_PLAYER  -> startOnePlayerGame();
+            case OPT_TWO_PLAYER  -> startTwoPlayerGame();
+            case OPT_TOURNAMENT  -> startTournament();
+            case OPT_QUIT        -> app.stop();
+            default              -> { }
         }
     }
 
@@ -149,14 +149,23 @@ public class MainMenuState extends BaseAppState {
 
     private void startTwoPlayerGame() {
         getStateManager().detach(this);
-        BaseAppState game = new GameState(GameState.GameMode.TWO_PLAYER);
-        getStateManager().attach(game);
+        getStateManager().attach(new GameState(GameState.GameMode.TWO_PLAYER));
     }
 
     private void startTournament() {
+        TournamentManager tournament = new TournamentManager();
+        GameState.GameConfig cfg = new GameState.GameConfig(GameState.GameMode.SINGLE_PLAYER);
+        cfg.tournament        = tournament;
+        cfg.aiSpeedMultiplier = tournament.getCurrentAiSpeedMultiplier();
+        cfg.aiReactionDelay   = tournament.getCurrentAiReactionDelay();
+        cfg.opponentName      = tournament.getCurrentOpponentName();
+        cfg.playerOneName     = "Joueur 1";
+
         getStateManager().detach(this);
-        getStateManager().attach(new EndScreenState());
+        getStateManager().attach(new GameState(cfg));
     }
+
+    // --------------- Input registration --------------------------------------
 
     private void registerInputMappings() {
         if (!app.getInputManager().hasMapping(MENU_UP)) {
@@ -192,6 +201,8 @@ public class MainMenuState extends BaseAppState {
             app.getInputManager().addMapping(MENU_SHORTCUT_QUIT, new KeyTrigger(KeyInput.KEY_ESCAPE));
         }
     }
+
+    // --------------- Preview match -------------------------------------------
 
     private void setupMenuPreviewBackground() {
         menuPreviewBulletAppState = new BulletAppState();
@@ -364,39 +375,17 @@ public class MainMenuState extends BaseAppState {
     }
 
     private float getPreviewCenterNeutralHalfDepth() {
-        if (menuPreviewTable == null) {
-            return PREVIEW_CENTER_NEUTRAL_HALF_DEPTH;
-        }
-        return menuPreviewTable.getCenterNeutralHalfDepth();
+        return (menuPreviewTable == null) ? PREVIEW_CENTER_NEUTRAL_HALF_DEPTH
+                : menuPreviewTable.getCenterNeutralHalfDepth();
     }
 
-    private float getPreviewPaddleSpeed() {
-        return PREVIEW_PADDLE_SPEED;
-    }
-
-    private float getPreviewPaddleDefensiveZ() {
-        return PREVIEW_PADDLE_DEFENSIVE_Z;
-    }
-
-    private float getPreviewGoalMargin() {
-        return PREVIEW_GOAL_MARGIN;
-    }
-
-    private float getPreviewMinPuckSpeed() {
-        return PREVIEW_MIN_PUCK_SPEED;
-    }
-
-    private float getPreviewServeMinSpeed() {
-        return PREVIEW_SERVE_MIN_SPEED;
-    }
-
-    private float getPreviewServeMaxSpeed() {
-        return PREVIEW_SERVE_MAX_SPEED;
-    }
-
-    private float getPreviewServeSpreadX() {
-        return PREVIEW_SERVE_SPREAD_X;
-    }
+    private float getPreviewPaddleSpeed()    { return PREVIEW_PADDLE_SPEED; }
+    private float getPreviewPaddleDefensiveZ() { return PREVIEW_PADDLE_DEFENSIVE_Z; }
+    private float getPreviewGoalMargin()     { return PREVIEW_GOAL_MARGIN; }
+    private float getPreviewMinPuckSpeed()   { return PREVIEW_MIN_PUCK_SPEED; }
+    private float getPreviewServeMinSpeed()  { return PREVIEW_SERVE_MIN_SPEED; }
+    private float getPreviewServeMaxSpeed()  { return PREVIEW_SERVE_MAX_SPEED; }
+    private float getPreviewServeSpreadX()   { return PREVIEW_SERVE_SPREAD_X; }
 
     private void setupMenuShadows() {
         com.jme3.light.DirectionalLight keyLight = menuPreviewTable.getShadowKeyLight();
@@ -420,6 +409,8 @@ public class MainMenuState extends BaseAppState {
         app.getCamera().lookAt(new Vector3f(0f, 0f, 0f), Vector3f.UNIT_Y);
     }
 
+    // --------------- AppState lifecycle --------------------------------------
+
     @Override
     protected void onEnable() {
         setupMenuPreviewBackground();
@@ -428,13 +419,8 @@ public class MainMenuState extends BaseAppState {
         app.getInputManager().setCursorVisible(true);
         app.getInputManager().addListener(
                 inputListener,
-                MENU_UP,
-                MENU_DOWN,
-                MENU_SELECT,
-                MENU_CLICK,
-                MENU_SHORTCUT_ONE,
-                MENU_SHORTCUT_TWO,
-                MENU_SHORTCUT_TOURNAMENT,
+                MENU_UP, MENU_DOWN, MENU_SELECT, MENU_CLICK,
+                MENU_SHORTCUT_ONE, MENU_SHORTCUT_TWO, MENU_SHORTCUT_TOURNAMENT,
                 MENU_SHORTCUT_QUIT);
     }
 
@@ -467,29 +453,19 @@ public class MainMenuState extends BaseAppState {
 
     @Override
     protected void cleanup(Application app) {
-        if (this.app.getInputManager().hasMapping(MENU_UP)) {
-            this.app.getInputManager().deleteMapping(MENU_UP);
-        }
-        if (this.app.getInputManager().hasMapping(MENU_DOWN)) {
-            this.app.getInputManager().deleteMapping(MENU_DOWN);
-        }
-        if (this.app.getInputManager().hasMapping(MENU_SELECT)) {
-            this.app.getInputManager().deleteMapping(MENU_SELECT);
-        }
-        if (this.app.getInputManager().hasMapping(MENU_CLICK)) {
-            this.app.getInputManager().deleteMapping(MENU_CLICK);
-        }
-        if (this.app.getInputManager().hasMapping(MENU_SHORTCUT_ONE)) {
-            this.app.getInputManager().deleteMapping(MENU_SHORTCUT_ONE);
-        }
-        if (this.app.getInputManager().hasMapping(MENU_SHORTCUT_TWO)) {
-            this.app.getInputManager().deleteMapping(MENU_SHORTCUT_TWO);
-        }
-        if (this.app.getInputManager().hasMapping(MENU_SHORTCUT_TOURNAMENT)) {
-            this.app.getInputManager().deleteMapping(MENU_SHORTCUT_TOURNAMENT);
-        }
-        if (this.app.getInputManager().hasMapping(MENU_SHORTCUT_QUIT)) {
-            this.app.getInputManager().deleteMapping(MENU_SHORTCUT_QUIT);
+        deleteIfPresent(MENU_UP);
+        deleteIfPresent(MENU_DOWN);
+        deleteIfPresent(MENU_SELECT);
+        deleteIfPresent(MENU_CLICK);
+        deleteIfPresent(MENU_SHORTCUT_ONE);
+        deleteIfPresent(MENU_SHORTCUT_TWO);
+        deleteIfPresent(MENU_SHORTCUT_TOURNAMENT);
+        deleteIfPresent(MENU_SHORTCUT_QUIT);
+    }
+
+    private void deleteIfPresent(String mapping) {
+        if (this.app.getInputManager().hasMapping(mapping)) {
+            this.app.getInputManager().deleteMapping(mapping);
         }
     }
 }

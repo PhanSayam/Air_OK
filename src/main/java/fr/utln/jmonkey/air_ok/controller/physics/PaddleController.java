@@ -19,11 +19,6 @@ import fr.utln.jmonkey.air_ok.model.Paddle;
 import fr.utln.jmonkey.air_ok.model.Puck;
 import fr.utln.jmonkey.air_ok.model.Table;
 
-/**
- * Handles all paddle movement (human and AI), input bindings, shot-physics
- * classification, and collision-group setup.  GameState owns an instance and
- * delegates update calls each frame.
- */
 public class PaddleController {
 
     // --------------- Constants -----------------------------------------------
@@ -61,22 +56,19 @@ public class PaddleController {
     private final GameState.GameMode gameMode;
     private final Puck puck;
     private final Paddle playerOnePaddle;
-    private final Paddle playerTwoPaddle; // null in SINGLE_PLAYER
-    private final Paddle aiPaddle;        // null in TWO_PLAYER
+    private final Paddle playerTwoPaddle;
+    private final Paddle aiPaddle;
     private final Table table;
-
-    /** Y position of the table play plane. */
     private final float tablePlaneY;
-    /** Half-depth of the neutral centre zone (from Table or a constant). */
     private final float centerNeutralHalfDepth;
 
-    // Movement booleans for player one
+    private float aiSpeedMultiplier = 1.0f;
+
     private boolean p1MoveLeft;
     private boolean p1MoveRight;
     private boolean p1MoveUp;
     private boolean p1MoveDown;
 
-    // Movement booleans for player two
     private boolean p2MoveLeft;
     private boolean p2MoveRight;
     private boolean p2MoveUp;
@@ -84,14 +76,12 @@ public class PaddleController {
 
     private ActionListener paddleInputListener;
 
-    // Velocities computed each frame – read by GameState for collision physics.
     private Vector3f playerOnePaddleVelocity = Vector3f.ZERO;
     private Vector3f playerTwoPaddleVelocity = Vector3f.ZERO;
     private Vector3f aiPaddleVelocity = Vector3f.ZERO;
 
     private float aiServeDelaySeconds;
 
-    /** Shot-debug overlay text owned by this controller. */
     private BitmapText shotDebugText;
     private float shotDebugTimerSeconds;
 
@@ -115,7 +105,10 @@ public class PaddleController {
 
     // --------------- Public setup API ----------------------------------------
 
-    /** Configure collision groups – call once after paddles are created. */
+    public void setAiSpeedMultiplier(float multiplier) {
+        this.aiSpeedMultiplier = Math.max(0.1f, multiplier);
+    }
+
     public void configureCollisionGroups() {
         configureHumanPaddleCollisions();
         if (gameMode == GameState.GameMode.SINGLE_PLAYER) {
@@ -125,12 +118,7 @@ public class PaddleController {
         }
     }
 
-    /**
-     * Register keyboard bindings for paddle movement.
-     * TOGGLE_DEBUG and RETURN_TO_MENU are handled by GameState directly.
-     */
     public void setupInput(InputManager inputManager) {
-        // Support AZERTY (ZQSD) and QWERTY (WASD) layouts.
         inputManager.addMapping(P1_MOVE_LEFT, new KeyTrigger(KeyInput.KEY_Q),
                 new KeyTrigger(KeyInput.KEY_A));
         inputManager.addMapping(P1_MOVE_RIGHT, new KeyTrigger(KeyInput.KEY_D));
@@ -161,9 +149,6 @@ public class PaddleController {
                 P2_MOVE_LEFT, P2_MOVE_RIGHT, P2_MOVE_UP, P2_MOVE_DOWN);
     }
 
-    /**
-     * Create and attach the shot-debug overlay text to the GUI.
-     */
     public void attachShotDebugText(Node guiNode, AssetManager am, float screenHeight) {
         BitmapFont guiFont = am.loadFont("Interface/Fonts/Default.fnt");
         shotDebugText = new BitmapText(guiFont);
@@ -178,12 +163,10 @@ public class PaddleController {
         return shotDebugText;
     }
 
-    /** Set the AI serve delay (called by GameState after each startExchange). */
     public void setAiServeDelay(float seconds) {
         this.aiServeDelaySeconds = seconds;
     }
 
-    /** Reset all velocity tracking (called by GameState after each startExchange). */
     public void resetVelocities() {
         playerOnePaddleVelocity = Vector3f.ZERO;
         playerTwoPaddleVelocity = Vector3f.ZERO;
@@ -193,7 +176,6 @@ public class PaddleController {
     // --------------- Per-frame update ----------------------------------------
 
     public void update(float tpf) {
-        // Shot-debug timer
         if (shotDebugTimerSeconds > 0f) {
             shotDebugTimerSeconds -= tpf;
             if (shotDebugTimerSeconds <= 0f && shotDebugText != null) {
@@ -201,7 +183,6 @@ public class PaddleController {
             }
         }
 
-        // AI serve delay timer
         if (aiServeDelaySeconds > 0f) {
             aiServeDelaySeconds = Math.max(0f, aiServeDelaySeconds - tpf);
         }
@@ -219,7 +200,7 @@ public class PaddleController {
         }
     }
 
-    // --------------- Velocity accessors (for collision physics) --------------
+    // --------------- Velocity accessors --------------------------------------
 
     public Vector3f getPlayerOnePaddleVelocity() {
         return playerOnePaddleVelocity;
@@ -255,7 +236,6 @@ public class PaddleController {
         float puckSpeed = puckVelocity.length();
         String detectedShot = null;
 
-        // Smash: hard, well-targeted hit gives +5% to +15% speed.
         if (paddleSpeed >= SMASH_MIN_SPEED && onTarget > 0.7f) {
             float boost = 1.05f + (float) Math.random() * 0.10f;
             Vector3f boosted = puckVelocity.mult(boost);
@@ -266,7 +246,6 @@ public class PaddleController {
             detectedShot = "SMASH";
         }
 
-        // Lift: angled strike imparts spin around vertical axis.
         if (paddleSpeed >= LIFT_MIN_SPEED && lateral > 0.35f) {
             Vector3f spinAxis = paddleDir.cross(Vector3f.UNIT_Y);
             if (spinAxis.lengthSquared() > 0.0001f) {
@@ -280,7 +259,6 @@ public class PaddleController {
             detectedShot = (detectedShot == null) ? "LIFT" : detectedShot + " + LIFT";
         }
 
-        // Flip: poorly oriented / soft hit slows the puck down.
         if (paddleSpeed <= FLIP_MAX_SPEED && onTarget < 0.25f && puckSpeed > 0.1f) {
             float slowdown = 0.78f + (float) Math.random() * 0.12f;
             puck.getPhysicsControl().setLinearVelocity(puckVelocity.mult(slowdown));
@@ -357,14 +335,19 @@ public class PaddleController {
         float safeTpf = Math.max(tpf, 0.0001f);
         float paddleSpeed = scaleLength(PADDLE_SPEED);
 
+        boolean left  = p2MoveLeft;
+        boolean right = p2MoveRight;
+        boolean up    = p2MoveUp;
+        boolean down  = p2MoveDown;
+
         float deltaX = 0f;
         float deltaZ = 0f;
 
-        if (p2MoveLeft)  deltaX += paddleSpeed * tpf;
-        if (p2MoveRight) deltaX -= paddleSpeed * tpf;
+        if (left)  deltaX += paddleSpeed * tpf;
+        if (right) deltaX -= paddleSpeed * tpf;
         // Camera is reversed for player two, so up/down are inverted in world Z.
-        if (p2MoveUp)   deltaZ += paddleSpeed * tpf;
-        if (p2MoveDown) deltaZ -= paddleSpeed * tpf;
+        if (up)   deltaZ += paddleSpeed * tpf;
+        if (down) deltaZ -= paddleSpeed * tpf;
 
         Vector3f currentPos = playerTwoPaddle.getPosition();
         float halfWidth = table.getWidth() / 2f;
@@ -418,7 +401,8 @@ public class PaddleController {
             targetZ = aiDefensiveLineZ;
         }
 
-        float maxStep = scaleLength(AI_PADDLE_SPEED) * tpf;
+        float effectiveSpeed = AI_PADDLE_SPEED * aiSpeedMultiplier;
+        float maxStep = scaleLength(effectiveSpeed) * tpf;
         float dx = targetX - aiPos.x;
         float dz = targetZ - aiPos.z;
         float distance = (float) Math.sqrt(dx * dx + dz * dz);

@@ -380,6 +380,11 @@ public class Puck {
         speedFireEmitter.setLocalTranslation(0f, HALF_HEIGHT * 0.55f, 0f);
     }
 
+    /** Move the puck by setting the spatial directly (for kinematic/display-only use). */
+    public void setDisplayPosition(float x, float z) {
+        puckNode.setLocalTranslation(x, HALF_HEIGHT, z);
+    }
+
     public void resetPosition(Vector3f newPosition) {
         position = new Vector3f(newPosition.x, HALF_HEIGHT, newPosition.z);
         puckNode.setLocalTranslation(position);

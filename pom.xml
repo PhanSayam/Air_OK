@@ -56,7 +56,7 @@
             <artifactId>jme3-jogg</artifactId>
             <version>${jme3_v}</version>
         </dependency>
-        <dependency>
+<dependency>
             <groupId>org.apache.groovy</groupId>
             <artifactId>groovy-jsr223</artifactId>
             <version>5.0.0</version>

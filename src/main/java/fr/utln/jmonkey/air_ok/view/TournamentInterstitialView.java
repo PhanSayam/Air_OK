@@ -3,6 +3,8 @@ package fr.utln.jmonkey.air_ok.view;
 import com.jme3.asset.AssetManager;
 import com.jme3.font.BitmapFont;
 import com.jme3.font.BitmapText;
+import com.jme3.font.LineWrapMode;
+import com.jme3.font.Rectangle;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
@@ -12,12 +14,14 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.shape.Quad;
 
-public class MainMenuView {
+public class TournamentInterstitialView {
+
     private static final String MATERIAL_COLOR_PARAM = "Color";
-    private static final ColorRGBA OPTION_TEXT_FRAME_COLOR = new ColorRGBA(0.12f, 0.16f, 0.22f, 0.88f);
-    private static final ColorRGBA OPTION_TEXT_FRAME_SELECTED_COLOR = new ColorRGBA(0.22f, 0.30f, 0.42f, 0.96f);
+    private static final ColorRGBA OPTION_TEXT_FRAME_COLOR = new ColorRGBA(0.78f, 0.86f, 0.97f, 0.52f);
+    private static final ColorRGBA OPTION_TEXT_FRAME_SELECTED_COLOR = new ColorRGBA(1f, 0.90f, 0.62f, 0.76f);
     private static final ColorRGBA OPTION_TEXT_COLOR = new ColorRGBA(0.93f, 0.96f, 1f, 1f);
     private static final ColorRGBA OPTION_SELECTED_TEXT_COLOR = new ColorRGBA(1f, 0.98f, 0.90f, 1f);
+
     private final Node rootNode;
     private final Geometry[] optionTextFrames;
     private final BitmapText[] optionTexts;
@@ -27,61 +31,61 @@ public class MainMenuView {
     private final float[] optionMaxY;
     private int selectedIndex;
 
-    public MainMenuView(AssetManager assetManager, float screenWidth, float screenHeight) {
-        rootNode = new Node("MainMenuView");
+    public TournamentInterstitialView(AssetManager assetManager, float screenWidth, float screenHeight,
+            String titleText, ColorRGBA titleColor, String infoText, String[] options) {
+
+        rootNode = new Node("TournamentInterstitialView");
 
         BitmapFont font = assetManager.loadFont("Interface/Fonts/Default.fnt");
 
-        float menuColumnWidth = Math.min(430f, screenWidth * 0.36f);
+        float menuColumnWidth = Math.min(480f, screenWidth * 0.40f);
         float menuLeft = Math.max(44f, screenWidth * 0.06f);
-        float menuTop = screenHeight * 0.80f;
+        float menuTop = screenHeight * 0.76f;
 
-        Geometry bg = createQuad(assetManager, "MenuBackground",
+        Geometry bg = createQuad(assetManager, "TournamentBg",
                 new Vector2f(0f, 0f),
                 new Vector2f(screenWidth, screenHeight),
-                new ColorRGBA(0.02f, 0.04f, 0.07f, 0.18f), 0.1f);
+                new ColorRGBA(0.02f, 0.03f, 0.04f, 0.22f), 0.1f);
         rootNode.attachChild(bg);
 
         BitmapText title = new BitmapText(font);
-        title.setSize(font.getCharSet().getRenderedSize() * 2.8f);
-        title.setColor(new ColorRGBA(0.96f, 0.98f, 1f, 1f));
-        title.setText("AIR OK");
+        title.setSize(font.getCharSet().getRenderedSize() * 2.4f);
+        title.setColor(titleColor);
+        title.setText(titleText);
         float titleY = menuTop;
-        title.setLocalTranslation(menuLeft + (menuColumnWidth - title.getLineWidth()) * 0.5f,
-                titleY, 1f);
+        title.setLocalTranslation(menuLeft + (menuColumnWidth - title.getLineWidth()) * 0.5f, titleY, 1f);
         rootNode.attachChild(title);
 
-        BitmapText subtitle = new BitmapText(font);
-        subtitle.setSize(font.getCharSet().getRenderedSize() * 0.92f);
-        subtitle.setColor(new ColorRGBA(0.70f, 0.80f, 0.92f, 1f));
-        subtitle.setText("Selectionne un mode de jeu");
-        float subtitleY = titleY - title.getLineHeight() - 14f;
-        subtitle.setLocalTranslation(menuLeft + (menuColumnWidth - subtitle.getLineWidth()) * 0.5f,
-                subtitleY, 1f);
-        rootNode.attachChild(subtitle);
+        BitmapText info = new BitmapText(font);
+        info.setSize(font.getCharSet().getRenderedSize() * 0.95f);
+        info.setColor(new ColorRGBA(0.88f, 0.93f, 0.99f, 1f));
+        info.setBox(new Rectangle(menuLeft, titleY - title.getLineHeight() - 110f, menuColumnWidth, 100f));
+        info.setLineWrapMode(LineWrapMode.Word);
+        info.setAlignment(BitmapFont.Align.Center);
+        info.setText(infoText);
+        info.setLocalTranslation(0f, 0f, 1f);
+        rootNode.attachChild(info);
 
-        // 4 options: 1 Joueur, 2 Joueurs, Tournoi, Quitter
-        String[] entries = { "1 Joueur", "2 Joueurs", "Tournoi", "Quitter" };
-        optionTextFrames = new Geometry[entries.length];
-        optionTexts = new BitmapText[entries.length];
-        optionMinX = new float[entries.length];
-        optionMaxX = new float[entries.length];
-        optionMinY = new float[entries.length];
-        optionMaxY = new float[entries.length];
+        optionTextFrames = new Geometry[options.length];
+        optionTexts = new BitmapText[options.length];
+        optionMinX = new float[options.length];
+        optionMaxX = new float[options.length];
+        optionMinY = new float[options.length];
+        optionMaxY = new float[options.length];
 
         float optionWidth = menuColumnWidth;
-        float optionHeight = 58f;
+        float optionHeight = 62f;
         float optionX = menuLeft;
-        float firstOptionY = subtitleY - subtitle.getLineHeight() - 48f;
-        float optionSpacing = 74f;
+        float firstOptionY = titleY - title.getLineHeight() - 220f;
+        float optionSpacing = 82f;
 
-        for (int i = 0; i < entries.length; i++) {
+        for (int i = 0; i < options.length; i++) {
             float y = firstOptionY - i * optionSpacing;
 
             BitmapText optionText = new BitmapText(font);
-            optionText.setSize(font.getCharSet().getRenderedSize() * 1.18f);
+            optionText.setSize(font.getCharSet().getRenderedSize() * 1.16f);
             optionText.setColor(OPTION_TEXT_COLOR);
-            optionText.setText(entries[i]);
+            optionText.setText(options[i]);
             optionText.setLocalTranslation(
                     optionX + (optionWidth - optionText.getLineWidth()) * 0.5f,
                     y + optionHeight * 0.62f,
@@ -93,7 +97,7 @@ public class MainMenuView {
             float textFrameHeight = optionText.getLineHeight() + 26f;
             float textFrameX = optionX + (optionWidth - textFrameWidth) * 0.5f;
             float textFrameY = y + (optionHeight - textFrameHeight) * 0.5f - 3f;
-            Geometry optionTextFrame = createQuad(assetManager, "MainMenuOptionTextFrame_" + i,
+            Geometry optionTextFrame = createQuad(assetManager, "TournOptFrame_" + i,
                     new Vector2f(textFrameX, textFrameY),
                     new Vector2f(textFrameWidth, textFrameHeight),
                     OPTION_TEXT_FRAME_COLOR, 0.62f);
@@ -105,15 +109,6 @@ public class MainMenuView {
             optionMinY[i] = textFrameY;
             optionMaxY[i] = textFrameY + textFrameHeight;
         }
-
-        BitmapText hint = new BitmapText(font);
-        hint.setSize(font.getCharSet().getRenderedSize() * 0.75f);
-        hint.setColor(new ColorRGBA(0.62f, 0.71f, 0.83f, 1f));
-        hint.setText("Fleches + Entree ou clic souris  |  1/2/T/Echap");
-        hint.setLocalTranslation(menuLeft + (menuColumnWidth - hint.getLineWidth()) * 0.5f,
-                firstOptionY - optionSpacing * entries.length + 18f,
-                1f);
-        rootNode.attachChild(hint);
 
         setSelectedIndex(0);
     }
@@ -133,13 +128,8 @@ public class MainMenuView {
         return geo;
     }
 
-    public Node getRootNode() {
-        return rootNode;
-    }
-
-    public int getOptionCount() {
-        return optionTextFrames.length;
-    }
+    public Node getRootNode() { return rootNode; }
+    public int getOptionCount() { return optionTextFrames.length; }
 
     public void setSelectedIndex(int index) {
         selectedIndex = Math.max(0, Math.min(optionTextFrames.length - 1, index));
@@ -147,17 +137,14 @@ public class MainMenuView {
     }
 
     public void updateSelectionPulse(float timer) {
-        if (Float.isNaN(timer)) {
-            return;
-        }
-
+        if (Float.isNaN(timer)) return;
         for (int i = 0; i < optionTextFrames.length; i++) {
-            Material textFrameMat = optionTextFrames[i].getMaterial();
+            Material mat = optionTextFrames[i].getMaterial();
             if (i == selectedIndex) {
-                textFrameMat.setColor(MATERIAL_COLOR_PARAM, OPTION_TEXT_FRAME_SELECTED_COLOR);
+                mat.setColor(MATERIAL_COLOR_PARAM, OPTION_TEXT_FRAME_SELECTED_COLOR);
                 optionTexts[i].setColor(OPTION_SELECTED_TEXT_COLOR);
             } else {
-                textFrameMat.setColor(MATERIAL_COLOR_PARAM, OPTION_TEXT_FRAME_COLOR);
+                mat.setColor(MATERIAL_COLOR_PARAM, OPTION_TEXT_FRAME_COLOR);
                 optionTexts[i].setColor(OPTION_TEXT_COLOR);
             }
         }
@@ -167,7 +154,8 @@ public class MainMenuView {
         float x = cursorPosition.x;
         float y = cursorPosition.y;
         for (int i = 0; i < optionTextFrames.length; i++) {
-            if (x >= optionMinX[i] && x <= optionMaxX[i] && y >= optionMinY[i] && y <= optionMaxY[i]) {
+            if (x >= optionMinX[i] && x <= optionMaxX[i]
+                    && y >= optionMinY[i] && y <= optionMaxY[i]) {
                 return i;
             }
         }
