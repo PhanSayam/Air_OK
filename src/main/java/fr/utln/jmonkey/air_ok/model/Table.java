@@ -62,9 +62,9 @@ public class Table {
         topDecorModel = attachModel(arenaNode, "Models/top.glb", "TopDecorModel");
         bottomDecorModel = attachModel(arenaNode, "Models/bottom.glb", "BottomDecorModel");
 
-        // Table surface and bottom use their GLB colour/texture.
-        makeGlbVisible(tableModel);
-        makeGlbVisible(bottomDecorModel);
+        // Table surface slightly darkened so coloured power-ups stand out against the white.
+        makeGlbVisible(tableModel,       new ColorRGBA(0.55f, 0.55f, 0.55f, 1f));
+        makeGlbVisible(bottomDecorModel, new ColorRGBA(0.7f,  0.7f,  0.7f,  1f));
 
         // Walls and top border are intentionally black regardless of GLB material.
         paintModelColor(leftWallModel, ColorRGBA.Black);
@@ -167,7 +167,7 @@ public class Table {
         });
     }
 
-    private void makeGlbVisible(Spatial model) {
+    private void makeGlbVisible(Spatial model, ColorRGBA tint) {
         model.depthFirstTraversal(new SceneGraphVisitorAdapter() {
             @Override
             public void visit(Geometry geom) {
@@ -184,16 +184,16 @@ public class Table {
 
                 if (baseColorTexture != null) {
                     dst.setTexture("ColorMap", baseColorTexture);
+                    dst.setColor("Color", tint);
                 } else {
-                    ColorRGBA color = new ColorRGBA(0.7f, 0.7f, 0.7f, 1f);
+                    ColorRGBA color = tint.clone();
                     if (src != null) {
                         Object colVal = src.getParamValue("BaseColor");
                         if (colVal instanceof ColorRGBA c) {
-                            final float minBrightness = 0.4f;
                             color = new ColorRGBA(
-                                    Math.max(minBrightness, c.r),
-                                    Math.max(minBrightness, c.g),
-                                    Math.max(minBrightness, c.b),
+                                    c.r * tint.r,
+                                    c.g * tint.g,
+                                    c.b * tint.b,
                                     c.a);
                         }
                     }
@@ -219,7 +219,7 @@ public class Table {
         this.shadowKeyLight = keyLight;
 
         SpotLight overheadLight = new SpotLight();
-        overheadLight.setColor(new ColorRGBA(2.2f, 2.1f, 2.0f, 1f));
+        overheadLight.setColor(new ColorRGBA(1.2f, 1.15f, 1.1f, 1f));
         overheadLight.setPosition(new Vector3f(0f, 18f, 0f));
         overheadLight.setDirection(new Vector3f(0f, -1f, 0f));
         overheadLight.setSpotRange(80f);

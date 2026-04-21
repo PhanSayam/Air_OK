@@ -1,12 +1,15 @@
 package fr.utln.jmonkey.air_ok.model;
 
 import com.jme3.asset.AssetManager;
+import com.jme3.bounding.BoundingBox;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
+import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Cylinder;
 
 public class PowerUp {
@@ -20,108 +23,127 @@ public class PowerUp {
         PADDLE_MINUS("Paddle -");
 
         private final String label;
+        private final String modelPath;
 
         Type(String label) {
             this.label = label;
+            this.modelPath = "Models/" + name().toLowerCase() + ".glb";
         }
 
-        public String getLabel() {
-            return label;
-        }
+        public String getLabel()     { return label; }
+        public String getModelPath() { return modelPath; }
     }
 
-    // Disc dimensions must match the game's unit scale (puck radius ≈ 80, half-height ≈ 25).
-    private static final float DISC_HALF_HEIGHT = 10f;
-    private static final float DISC_RADIUS = 55f;
-    // Bob amplitude in game units (Puck.HALF_HEIGHT = 25, so 6 is a modest float).
+    public static final float DISC_RADIUS = 150f;
     private static final float BOB_AMPLITUDE = 6f;
 
     private final Type type;
     private final Vector3f position;
     private final Node powerUpNode;
-
-    // Timer for the bobbing animation
+    private Geometry hitboxGeo;
     private float timeOffset;
 
     public PowerUp(Type type, Vector3f position, AssetManager assetManager) {
         this.type = type;
-        // Use the spawn Y from the manager (tablePlaneY) — do not override with a hardcoded value.
         this.position = position.clone();
         this.powerUpNode = createVisual(assetManager);
         this.powerUpNode.setLocalTranslation(this.position);
-
-        // Randomize start time so multiple power-ups don't bob in perfect sync
         this.timeOffset = (float) (Math.random() * FastMath.PI);
+
+        hitboxGeo = buildHitboxDisc(assetManager);
+        powerUpNode.attachChild(hitboxGeo);
     }
 
     private Node createVisual(AssetManager assetManager) {
         Node node = new Node("PowerUp_" + type.name());
 
-        Cylinder body = new Cylinder(16, 24, DISC_RADIUS, DISC_HALF_HEIGHT * 2f, true);
-        Geometry bodyGeo = new Geometry("PowerUpBody", body);
-        Material bodyMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        bodyMat.setColor("Color", getColor(type));
-        bodyGeo.setMaterial(bodyMat);
-        // Rotate flat to lie on the table
-        bodyGeo.rotate(FastMath.HALF_PI, 0f, 0f);
+        Spatial model = tryLoadModel(assetManager, type.getModelPath());
+        if (model != null) {
+            fitModelToRadius(model, DISC_RADIUS);
+            alignModelBase(model);
+            node.attachChild(model);
+        } else {
+            node.attachChild(buildFallbackCylinder(assetManager));
+        }
 
-        Cylinder ring = new Cylinder(16, 24, DISC_RADIUS * 0.65f, DISC_HALF_HEIGHT * 0.6f, true);
-        Geometry ringGeo = new Geometry("PowerUpRing", ring);
-        Material ringMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        ringMat.setColor("Color", ColorRGBA.White);
-        ringGeo.setMaterial(ringMat);
-        // Rotate flat and move slightly up to sit inside the body
-        ringGeo.rotate(FastMath.HALF_PI, 0f, 0f);
-        ringGeo.setLocalTranslation(0f, DISC_HALF_HEIGHT * 0.45f, 0f);
-
-        node.attachChild(bodyGeo);
-        node.attachChild(ringGeo);
         return node;
     }
 
-    private ColorRGBA getColor(Type powerUpType) {
-        return switch (powerUpType) {
-            case SPEED_PLUS -> new ColorRGBA(1f, 0.78f, 0.15f, 1f);
-            case SIZE_PLUS -> new ColorRGBA(0.38f, 0.90f, 0.45f, 1f);
-            case SIZE_MINUS -> new ColorRGBA(0.98f, 0.40f, 0.40f, 1f);
-            case SHOT_ON_GOAL -> new ColorRGBA(0.30f, 0.78f, 1f, 1f);
-            case PADDLE_PLUS -> new ColorRGBA(0.58f, 0.58f, 1f, 1f);
-            case PADDLE_MINUS -> new ColorRGBA(1f, 0.56f, 0.22f, 1f);
+    private Spatial tryLoadModel(AssetManager assetManager, String path) {
+        try {
+            Spatial model = assetManager.loadModel(path);
+            if (model instanceof Node n && n.getQuantity() == 0) return null;
+            return model;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void fitModelToRadius(Spatial model, float targetRadius) {
+        model.updateGeometricState();
+        if (!(model.getWorldBound() instanceof BoundingBox bounds)) return;
+        float r = Math.max(bounds.getXExtent(), bounds.getZExtent());
+        if (r > 0.0001f) model.setLocalScale(targetRadius / r);
+    }
+
+    private void alignModelBase(Spatial model) {
+        model.updateGeometricState();
+        if (!(model.getWorldBound() instanceof BoundingBox bounds)) return;
+        Vector3f c = bounds.getCenter();
+        model.setLocalTranslation(-c.x, -(c.y - bounds.getYExtent()), -c.z);
+    }
+
+    private Geometry buildFallbackCylinder(AssetManager assetManager) {
+        Geometry geo = new Geometry("PowerUpFallback",
+                new Cylinder(16, 24, DISC_RADIUS, 20f, true));
+        Material mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+        mat.setColor("Color", getFallbackColor(type));
+        geo.setMaterial(mat);
+        geo.rotate(FastMath.HALF_PI, 0f, 0f);
+        return geo;
+    }
+
+    private Geometry buildHitboxDisc(AssetManager assetManager) {
+        Geometry geo = new Geometry("PowerUpHitbox",
+                new Cylinder(2, 48, DISC_RADIUS, 2f, true));
+        Material mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+        mat.setColor("Color", ColorRGBA.Yellow);
+        mat.getAdditionalRenderState().setWireframe(true);
+        geo.setMaterial(mat);
+        geo.rotate(FastMath.HALF_PI, 0f, 0f);
+        geo.setCullHint(Spatial.CullHint.Always);
+        return geo;
+    }
+
+    private ColorRGBA getFallbackColor(Type t) {
+        return switch (t) {
+            case SPEED_PLUS   -> new ColorRGBA(1f,    0.78f, 0.15f, 1f);
+            case SIZE_PLUS    -> new ColorRGBA(0.38f, 0.90f, 0.45f, 1f);
+            case SIZE_MINUS   -> new ColorRGBA(0.98f, 0.40f, 0.40f, 1f);
+            case SHOT_ON_GOAL -> new ColorRGBA(0.30f, 0.78f, 1f,    1f);
+            case PADDLE_PLUS  -> new ColorRGBA(0.58f, 0.58f, 1f,    1f);
+            case PADDLE_MINUS -> new ColorRGBA(1f,    0.56f, 0.22f, 1f);
         };
     }
 
-    /**
-     * Updates the floating and spinning animation.
-     * MUST be called from the main update loop.
-     */
     public void updateAnimation(float tpf) {
         timeOffset += tpf;
-
-        // Spin around Y axis
         powerUpNode.rotate(0f, 2.5f * tpf, 0f);
-
-        // Bob up and down using a Sine wave
         float floatOffset = FastMath.sin(timeOffset * 4f) * BOB_AMPLITUDE;
         powerUpNode.setLocalTranslation(position.x, position.y + floatOffset, position.z);
     }
 
-    public void attachTo(Node parentNode) {
-        parentNode.attachChild(powerUpNode);
+    public void setHitboxVisible(boolean visible) {
+        if (hitboxGeo != null) {
+            hitboxGeo.setCullHint(visible
+                    ? Spatial.CullHint.Dynamic
+                    : Spatial.CullHint.Always);
+        }
     }
 
-    public void removeFromParent() {
-        powerUpNode.removeFromParent();
-    }
-
-    public Type getType() {
-        return type;
-    }
-
-    public float getRadius() {
-        return DISC_RADIUS;
-    }
-
-    public Vector3f getPosition() {
-        return powerUpNode.getLocalTranslation();
-    }
+    public void attachTo(Node parentNode)  { parentNode.attachChild(powerUpNode); }
+    public void removeFromParent()         { powerUpNode.removeFromParent(); }
+    public Type getType()                  { return type; }
+    public float getRadius()               { return DISC_RADIUS; }
+    public Vector3f getPosition()          { return powerUpNode.getLocalTranslation(); }
 }

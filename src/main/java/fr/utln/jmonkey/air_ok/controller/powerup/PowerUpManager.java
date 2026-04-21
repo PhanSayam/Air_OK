@@ -59,6 +59,7 @@ public class PowerUpManager {
     private Paddle playerTwoPaddle; // may be null in SINGLE_PLAYER
 
     private PowerUp activePowerUp;
+    private boolean hitboxDebugEnabled = false;
     private float powerUpSpawnTimerSeconds;
     private float puckSpeedBoostTimerSeconds;
     private float puckSpeedBoostMinSpeed;
@@ -182,6 +183,17 @@ public class PowerUpManager {
         Vector3f spawnPosition = findPowerUpSpawnPosition();
         activePowerUp = new PowerUp(selectedType, spawnPosition, assetManager);
         activePowerUp.attachTo(gameNode);
+        if (hitboxDebugEnabled) {
+            activePowerUp.setHitboxVisible(true);
+        }
+    }
+
+    /** Toggles the yellow wireframe hitbox disc on the active (and future) power-ups. */
+    public void setHitboxDebugEnabled(boolean enabled) {
+        hitboxDebugEnabled = enabled;
+        if (activePowerUp != null) {
+            activePowerUp.setHitboxVisible(enabled);
+        }
     }
 
     private Vector3f findPowerUpSpawnPosition() {

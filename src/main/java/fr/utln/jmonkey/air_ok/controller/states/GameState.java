@@ -248,7 +248,9 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
 
         appInputListener = (name, isPressed, tpf) -> {
             if (TOGGLE_DEBUG.equals(name) && isPressed) {
-                bulletAppState.setDebugEnabled(!bulletAppState.isDebugEnabled());
+                boolean debug = !bulletAppState.isDebugEnabled();
+                bulletAppState.setDebugEnabled(debug);
+                if (powerUpManager != null) powerUpManager.setHitboxDebugEnabled(debug);
             } else if (RETURN_TO_MENU.equals(name) && isPressed) {
                 returnToMainMenu();
             }
