@@ -36,10 +36,13 @@ public class MainMenuView {
         float menuLeft = Math.max(44f, screenWidth * 0.06f);
         float menuTop = screenHeight * 0.80f;
 
-        Geometry bg = createQuad(assetManager, "MenuBackground",
-                new Vector2f(0f, 0f),
-                new Vector2f(screenWidth, screenHeight),
-                new ColorRGBA(0.02f, 0.04f, 0.07f, 0.18f), 0.1f);
+        //Geometry bg = createQuad(assetManager, "MenuBackground",
+        //        new Vector2f(0f, 0f),
+        //        new Vector2f(screenWidth, screenHeight),
+        //        new ColorRGBA(0.02f, 0.04f, 0.07f, 0.18f), 0.1f);
+        //rootNode.attachChild(bg);
+        Geometry bg = createTexturedQuad(assetManager, "MenuBackground",
+                screenWidth, screenHeight);
         rootNode.attachChild(bg);
 
         BitmapText title = new BitmapText(font);
@@ -129,6 +132,28 @@ public class MainMenuView {
         mat.getAdditionalRenderState().setDepthWrite(false);
         geo.setMaterial(mat);
         geo.setLocalTranslation(position.x, position.y, z);
+        geo.setQueueBucket(RenderQueue.Bucket.Gui);
+        return geo;
+    }
+
+    private Geometry createTexturedQuad(AssetManager assetManager, String name,
+                                        float width, float height) {
+        Geometry geo = new Geometry(name, new Quad(width, height));
+        Material mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+        try {
+            com.jme3.texture.Texture tex = assetManager.loadTexture("Textures/arcade.png");
+            tex.setWrap(com.jme3.texture.Texture.WrapMode.Clamp);
+            mat.setTexture("ColorMap", tex);
+        } catch (Exception e) {
+            // fallback : fond sombre si l'image est absente
+            mat.setColor("Color", new ColorRGBA(0.02f, 0.04f, 0.10f, 1f));
+        }
+        mat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Off);
+        mat.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
+        mat.getAdditionalRenderState().setDepthTest(false);
+        mat.getAdditionalRenderState().setDepthWrite(false);
+        geo.setMaterial(mat);
+        geo.setLocalTranslation(0f, 0f, 0f); // z=0, derrière tout le reste
         geo.setQueueBucket(RenderQueue.Bucket.Gui);
         return geo;
     }

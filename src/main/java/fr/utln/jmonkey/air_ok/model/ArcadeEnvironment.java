@@ -30,18 +30,15 @@ public class ArcadeEnvironment {
         envNode = new Node("ArcadeEnvironmentNode");
         rootNode.attachChild(envNode);
 
-        // Charger l'image de fond
         try {
-            Spatial sky = SkyFactory.createSky(assetManager, "Textures/arcade.png", SkyFactory.EnvMapType.SphereMap);
+            Spatial sky = SkyFactory.createSky(assetManager, "Textures/arcade.png",
+                    SkyFactory.EnvMapType.SphereMap);
             envNode.attachChild(sky);
         } catch (Exception e) {
             System.err.println("Image non trouvee, on reste sur le fond par defaut.");
         }
 
-
-        // Ajouter la grille néon
         addFloorGrid();
-
     }
 
     private void addFloorGrid() {
