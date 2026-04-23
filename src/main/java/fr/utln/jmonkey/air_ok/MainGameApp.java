@@ -14,6 +14,9 @@ public class MainGameApp extends SimpleApplication {
         settings.setResizable(true);
         app.setSettings(settings);
         app.setShowSettings(false);
+        if ("true".equals(System.getProperty("nosound"))) {
+            settings.setAudioRenderer(null);
+        }
         app.start();
     }
 
