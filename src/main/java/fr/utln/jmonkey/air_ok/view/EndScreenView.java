@@ -16,10 +16,11 @@ import com.jme3.scene.shape.Quad;
 
 public class EndScreenView {
     private static final String MATERIAL_COLOR_PARAM = "Color";
-    private static final ColorRGBA OPTION_TEXT_FRAME_COLOR = new ColorRGBA(0.78f, 0.86f, 0.97f, 0.52f);
-    private static final ColorRGBA OPTION_TEXT_FRAME_SELECTED_COLOR = new ColorRGBA(1f, 0.90f, 0.62f, 0.76f);
-    private static final ColorRGBA OPTION_TEXT_COLOR = new ColorRGBA(0.93f, 0.96f, 1f, 1f);
-    private static final ColorRGBA OPTION_SELECTED_TEXT_COLOR = new ColorRGBA(1f, 0.98f, 0.90f, 1f);
+    private static final ColorRGBA PANEL_COLOR                    = new ColorRGBA(0.88f, 0.88f, 0.88f, 0.68f);
+    private static final ColorRGBA OPTION_TEXT_FRAME_COLOR         = new ColorRGBA(0.42f, 0.42f, 0.44f, 1f);
+    private static final ColorRGBA OPTION_TEXT_FRAME_SELECTED_COLOR = new ColorRGBA(0.20f, 0.20f, 0.23f, 1f);
+    private static final ColorRGBA OPTION_TEXT_COLOR               = ColorRGBA.Black;
+    private static final ColorRGBA OPTION_SELECTED_TEXT_COLOR      = ColorRGBA.Black;
 
     private final Node rootNode;
     private final BitmapText scoresText;
@@ -40,15 +41,9 @@ public class EndScreenView {
         float menuLeft = Math.max(44f, screenWidth * 0.06f);
         float menuTop = screenHeight * 0.74f;
 
-        Geometry bg = createQuad(assetManager, "EndBg",
-                new Vector2f(0f, 0f),
-                new Vector2f(screenWidth, screenHeight),
-                new ColorRGBA(0.02f, 0.03f, 0.04f, 0.22f), 0.1f);
-        rootNode.attachChild(bg);
-
         BitmapText title = new BitmapText(font);
         title.setSize(font.getCharSet().getRenderedSize() * 2.6f);
-        title.setColor(new ColorRGBA(1f, 0.95f, 0.82f, 1f));
+        title.setColor(ColorRGBA.Black);
         title.setText("Fin de partie");
         float titleY = menuTop;
         title.setLocalTranslation(menuLeft + (menuColumnWidth - title.getLineWidth()) * 0.5f,
@@ -57,7 +52,7 @@ public class EndScreenView {
 
         scoresText = new BitmapText(font);
         scoresText.setSize(font.getCharSet().getRenderedSize() * 0.95f);
-        scoresText.setColor(new ColorRGBA(0.88f, 0.93f, 0.99f, 1f));
+        scoresText.setColor(ColorRGBA.Black);
         scoresText.setBox(new Rectangle(menuLeft, titleY - title.getLineHeight() - 132f, menuColumnWidth, 120f));
         scoresText.setLineWrapMode(LineWrapMode.Word);
         scoresText.setAlignment(BitmapFont.Align.Center);
@@ -112,12 +107,24 @@ public class EndScreenView {
 
         BitmapText hint = new BitmapText(font);
         hint.setSize(font.getCharSet().getRenderedSize() * 0.72f);
-        hint.setColor(new ColorRGBA(0.67f, 0.73f, 0.84f, 1f));
+        hint.setColor(ColorRGBA.Black);
         hint.setText("Fleches + Entree ou clic souris");
+        float hintY = firstOptionY - optionSpacing * entries.length + 18f;
         hint.setLocalTranslation(menuLeft + (menuColumnWidth - hint.getLineWidth()) * 0.5f,
-                firstOptionY - optionSpacing * entries.length + 18f,
-                1f);
+                hintY, 1f);
         rootNode.attachChild(hint);
+
+        float panelPadding = 28f;
+        float panelX = menuLeft - panelPadding;
+        float panelBottom = hintY - hint.getLineHeight() - panelPadding;
+        float panelTop = menuTop + title.getLineHeight() * 0.3f + panelPadding;
+        float panelWidth = menuColumnWidth + panelPadding * 2f;
+        float panelHeight = panelTop - panelBottom;
+        Geometry panel = createQuad(assetManager, "EndPanel",
+                new Vector2f(panelX, panelBottom),
+                new Vector2f(panelWidth, panelHeight),
+                PANEL_COLOR, 0.3f);
+        rootNode.attachChild(panel);
 
         setSelectedIndex(0);
     }

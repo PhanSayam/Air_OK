@@ -17,10 +17,11 @@ import com.jme3.scene.shape.Quad;
 public class TournamentInterstitialView {
 
     private static final String MATERIAL_COLOR_PARAM = "Color";
-    private static final ColorRGBA OPTION_TEXT_FRAME_COLOR = new ColorRGBA(0.78f, 0.86f, 0.97f, 0.52f);
-    private static final ColorRGBA OPTION_TEXT_FRAME_SELECTED_COLOR = new ColorRGBA(1f, 0.90f, 0.62f, 0.76f);
-    private static final ColorRGBA OPTION_TEXT_COLOR = new ColorRGBA(0.93f, 0.96f, 1f, 1f);
-    private static final ColorRGBA OPTION_SELECTED_TEXT_COLOR = new ColorRGBA(1f, 0.98f, 0.90f, 1f);
+    private static final ColorRGBA PANEL_COLOR                    = new ColorRGBA(0.88f, 0.88f, 0.88f, 0.68f);
+    private static final ColorRGBA OPTION_TEXT_FRAME_COLOR         = new ColorRGBA(0.42f, 0.42f, 0.44f, 1f);
+    private static final ColorRGBA OPTION_TEXT_FRAME_SELECTED_COLOR = new ColorRGBA(0.20f, 0.20f, 0.23f, 1f);
+    private static final ColorRGBA OPTION_TEXT_COLOR               = ColorRGBA.Black;
+    private static final ColorRGBA OPTION_SELECTED_TEXT_COLOR      = ColorRGBA.Black;
 
     private final Node rootNode;
     private final Geometry[] optionTextFrames;
@@ -42,12 +43,6 @@ public class TournamentInterstitialView {
         float menuLeft = Math.max(44f, screenWidth * 0.06f);
         float menuTop = screenHeight * 0.76f;
 
-        Geometry bg = createQuad(assetManager, "TournamentBg",
-                new Vector2f(0f, 0f),
-                new Vector2f(screenWidth, screenHeight),
-                new ColorRGBA(0.02f, 0.03f, 0.04f, 0.22f), 0.1f);
-        rootNode.attachChild(bg);
-
         BitmapText title = new BitmapText(font);
         title.setSize(font.getCharSet().getRenderedSize() * 2.4f);
         title.setColor(titleColor);
@@ -58,7 +53,7 @@ public class TournamentInterstitialView {
 
         BitmapText info = new BitmapText(font);
         info.setSize(font.getCharSet().getRenderedSize() * 0.95f);
-        info.setColor(new ColorRGBA(0.88f, 0.93f, 0.99f, 1f));
+        info.setColor(ColorRGBA.Black);
         info.setBox(new Rectangle(menuLeft, titleY - title.getLineHeight() - 110f, menuColumnWidth, 100f));
         info.setLineWrapMode(LineWrapMode.Word);
         info.setAlignment(BitmapFont.Align.Center);
@@ -79,6 +74,7 @@ public class TournamentInterstitialView {
         float firstOptionY = titleY - title.getLineHeight() - 220f;
         float optionSpacing = 82f;
 
+        float lastFrameBottomY = firstOptionY;
         for (int i = 0; i < options.length; i++) {
             float y = firstOptionY - i * optionSpacing;
 
@@ -108,7 +104,20 @@ public class TournamentInterstitialView {
             optionMaxX[i] = textFrameX + textFrameWidth;
             optionMinY[i] = textFrameY;
             optionMaxY[i] = textFrameY + textFrameHeight;
+            lastFrameBottomY = textFrameY;
         }
+
+        float panelPadding = 28f;
+        float panelX = menuLeft - panelPadding;
+        float panelBottom = lastFrameBottomY - panelPadding;
+        float panelTop = menuTop + title.getLineHeight() * 0.3f + panelPadding;
+        float panelWidth = menuColumnWidth + panelPadding * 2f;
+        float panelHeight = panelTop - panelBottom;
+        Geometry panel = createQuad(assetManager, "TournPanel",
+                new Vector2f(panelX, panelBottom),
+                new Vector2f(panelWidth, panelHeight),
+                PANEL_COLOR, 0.3f);
+        rootNode.attachChild(panel);
 
         setSelectedIndex(0);
     }

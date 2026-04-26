@@ -14,10 +14,11 @@ import com.jme3.scene.shape.Quad;
 
 public class MainMenuView {
     private static final String MATERIAL_COLOR_PARAM = "Color";
-    private static final ColorRGBA OPTION_TEXT_FRAME_COLOR = new ColorRGBA(0.12f, 0.16f, 0.22f, 0.88f);
-    private static final ColorRGBA OPTION_TEXT_FRAME_SELECTED_COLOR = new ColorRGBA(0.22f, 0.30f, 0.42f, 0.96f);
-    private static final ColorRGBA OPTION_TEXT_COLOR = new ColorRGBA(0.93f, 0.96f, 1f, 1f);
-    private static final ColorRGBA OPTION_SELECTED_TEXT_COLOR = new ColorRGBA(1f, 0.98f, 0.90f, 1f);
+    private static final ColorRGBA PANEL_COLOR                    = new ColorRGBA(0.88f, 0.88f, 0.88f, 0.68f);
+    private static final ColorRGBA OPTION_TEXT_FRAME_COLOR         = new ColorRGBA(0.42f, 0.42f, 0.44f, 1f);
+    private static final ColorRGBA OPTION_TEXT_FRAME_SELECTED_COLOR = new ColorRGBA(0.20f, 0.20f, 0.23f, 1f);
+    private static final ColorRGBA OPTION_TEXT_COLOR               = ColorRGBA.Black;
+    private static final ColorRGBA OPTION_SELECTED_TEXT_COLOR      = ColorRGBA.Black;
     private final Node rootNode;
     private final Geometry[] optionTextFrames;
     private final BitmapText[] optionTexts;
@@ -47,7 +48,7 @@ public class MainMenuView {
 
         BitmapText title = new BitmapText(font);
         title.setSize(font.getCharSet().getRenderedSize() * 2.8f);
-        title.setColor(new ColorRGBA(0.96f, 0.98f, 1f, 1f));
+        title.setColor(ColorRGBA.Black);
         title.setText("AIR OK");
         float titleY = menuTop;
         title.setLocalTranslation(menuLeft + (menuColumnWidth - title.getLineWidth()) * 0.5f,
@@ -56,7 +57,7 @@ public class MainMenuView {
 
         BitmapText subtitle = new BitmapText(font);
         subtitle.setSize(font.getCharSet().getRenderedSize() * 0.92f);
-        subtitle.setColor(new ColorRGBA(0.70f, 0.80f, 0.92f, 1f));
+        subtitle.setColor(ColorRGBA.Black);
         subtitle.setText("Selectionne un mode de jeu");
         float subtitleY = titleY - title.getLineHeight() - 14f;
         subtitle.setLocalTranslation(menuLeft + (menuColumnWidth - subtitle.getLineWidth()) * 0.5f,
@@ -111,12 +112,24 @@ public class MainMenuView {
 
         BitmapText hint = new BitmapText(font);
         hint.setSize(font.getCharSet().getRenderedSize() * 0.75f);
-        hint.setColor(new ColorRGBA(0.62f, 0.71f, 0.83f, 1f));
+        hint.setColor(ColorRGBA.Black);
         hint.setText("Fleches + Entree ou clic souris  |  1/2/T/Echap");
+        float hintY = firstOptionY - optionSpacing * entries.length + 18f;
         hint.setLocalTranslation(menuLeft + (menuColumnWidth - hint.getLineWidth()) * 0.5f,
-                firstOptionY - optionSpacing * entries.length + 18f,
-                1f);
+                hintY, 1f);
         rootNode.attachChild(hint);
+
+        float panelPadding = 28f;
+        float panelX = menuLeft - panelPadding;
+        float panelBottom = hintY - hint.getLineHeight() - panelPadding;
+        float panelTop = menuTop + title.getLineHeight() * 0.3f + panelPadding;
+        float panelWidth = menuColumnWidth + panelPadding * 2f;
+        float panelHeight = panelTop - panelBottom;
+        Geometry panel = createQuad(assetManager, "MenuPanel",
+                new Vector2f(panelX, panelBottom),
+                new Vector2f(panelWidth, panelHeight),
+                PANEL_COLOR, 0.3f);
+        rootNode.attachChild(panel);
 
         setSelectedIndex(0);
     }
