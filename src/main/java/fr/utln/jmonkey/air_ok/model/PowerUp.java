@@ -9,6 +9,7 @@ import com.jme3.math.Vector3f;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
+import com.jme3.scene.SceneGraphVisitorAdapter;
 import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Cylinder;
 
@@ -27,14 +28,14 @@ public class PowerUp {
 
         Type(String label) {
             this.label = label;
-            this.modelPath = "Models/" + name().toLowerCase() + ".glb";
+            this.modelPath = "Models/" + name().toLowerCase() + "3.glb";
         }
 
         public String getLabel()     { return label; }
         public String getModelPath() { return modelPath; }
     }
 
-    public static final float DISC_RADIUS = 150f;
+    public static final float DISC_RADIUS = 90f;
     private static final float BOB_AMPLITUDE = 6f;
 
     private final Type type;
@@ -58,9 +59,14 @@ public class PowerUp {
         Node node = new Node("PowerUp_" + type.name());
 
         Spatial model = tryLoadModel(assetManager, type.getModelPath());
+        if (model == null && type != Type.SPEED_PLUS) {
+            model = tryLoadModel(assetManager, Type.SPEED_PLUS.getModelPath());
+        }
+
         if (model != null) {
             fitModelToRadius(model, DISC_RADIUS);
             alignModelBase(model);
+            applyShadowMode(model);
             node.attachChild(model);
         } else {
             node.attachChild(buildFallbackCylinder(assetManager));
@@ -84,6 +90,15 @@ public class PowerUp {
         if (!(model.getWorldBound() instanceof BoundingBox bounds)) return;
         float r = Math.max(bounds.getXExtent(), bounds.getZExtent());
         if (r > 0.0001f) model.setLocalScale(targetRadius / r);
+    }
+
+    private void applyShadowMode(Spatial model) {
+        model.depthFirstTraversal(new SceneGraphVisitorAdapter() {
+            @Override
+            public void visit(Geometry geom) {
+                geom.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+            }
+        });
     }
 
     private void alignModelBase(Spatial model) {

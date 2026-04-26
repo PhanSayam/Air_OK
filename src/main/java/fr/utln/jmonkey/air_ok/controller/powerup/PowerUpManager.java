@@ -151,6 +151,9 @@ public class PowerUpManager {
     // --------------- Animations (called from GameState.update) ---------------
 
     public void updatePowerUpAnimations(float tpf) {
+        if (activePowerUp != null) {
+            activePowerUp.updateAnimation(tpf);
+        }
         puck.updateSpeedFire(tpf);
         puck.updateSizePowerUpAnimation(tpf);
 
