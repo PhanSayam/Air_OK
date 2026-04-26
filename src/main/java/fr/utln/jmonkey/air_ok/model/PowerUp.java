@@ -34,7 +34,7 @@ public class PowerUp {
         public String getModelPath() { return modelPath; }
     }
 
-    public static final float DISC_RADIUS = 150f;
+    public static final float DISC_RADIUS = 100f;
     private static final float BOB_AMPLITUDE = 6f;
 
     private final Type type;
