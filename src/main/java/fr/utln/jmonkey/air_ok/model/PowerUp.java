@@ -6,7 +6,6 @@ import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
-import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
@@ -57,26 +56,12 @@ public class PowerUp {
     private Node createVisual(AssetManager assetManager) {
         Node node = new Node("PowerUp_" + type.name());
 
-        Spatial model = tryLoadModel(assetManager, type.getModelPath());
-        if (model != null) {
-            fitModelToRadius(model, DISC_RADIUS);
-            alignModelBase(model);
-            node.attachChild(model);
-        } else {
-            node.attachChild(buildFallbackCylinder(assetManager));
-        }
+        Spatial model = assetManager.loadModel(type.getModelPath());
+        fitModelToRadius(model, DISC_RADIUS);
+        alignModelBase(model);
+        node.attachChild(model);
 
         return node;
-    }
-
-    private Spatial tryLoadModel(AssetManager assetManager, String path) {
-        try {
-            Spatial model = assetManager.loadModel(path);
-            if (model instanceof Node n && n.getQuantity() == 0) return null;
-            return model;
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     private void fitModelToRadius(Spatial model, float targetRadius) {
@@ -93,16 +78,6 @@ public class PowerUp {
         model.setLocalTranslation(-c.x, -(c.y - bounds.getYExtent()), -c.z);
     }
 
-    private Geometry buildFallbackCylinder(AssetManager assetManager) {
-        Geometry geo = new Geometry("PowerUpFallback",
-                new Cylinder(16, 24, DISC_RADIUS, 20f, true));
-        Material mat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
-        mat.setColor("Color", getFallbackColor(type));
-        geo.setMaterial(mat);
-        geo.rotate(FastMath.HALF_PI, 0f, 0f);
-        return geo;
-    }
-
     private Geometry buildHitboxDisc(AssetManager assetManager) {
         Geometry geo = new Geometry("PowerUpHitbox",
                 new Cylinder(2, 48, DISC_RADIUS, 2f, true));
@@ -113,17 +88,6 @@ public class PowerUp {
         geo.rotate(FastMath.HALF_PI, 0f, 0f);
         geo.setCullHint(Spatial.CullHint.Always);
         return geo;
-    }
-
-    private ColorRGBA getFallbackColor(Type t) {
-        return switch (t) {
-            case SPEED_PLUS   -> new ColorRGBA(1f,    0.78f, 0.15f, 1f);
-            case SIZE_PLUS    -> new ColorRGBA(0.38f, 0.90f, 0.45f, 1f);
-            case SIZE_MINUS   -> new ColorRGBA(0.98f, 0.40f, 0.40f, 1f);
-            case SHOT_ON_GOAL -> new ColorRGBA(0.30f, 0.78f, 1f,    1f);
-            case PADDLE_PLUS  -> new ColorRGBA(0.58f, 0.58f, 1f,    1f);
-            case PADDLE_MINUS -> new ColorRGBA(1f,    0.56f, 0.22f, 1f);
-        };
     }
 
     public void updateAnimation(float tpf) {
