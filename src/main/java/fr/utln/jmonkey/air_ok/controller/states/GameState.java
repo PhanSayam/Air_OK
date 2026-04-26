@@ -33,6 +33,7 @@ import fr.utln.jmonkey.air_ok.model.Player;
 import fr.utln.jmonkey.air_ok.model.Puck;
 import fr.utln.jmonkey.air_ok.model.Table;
 import fr.utln.jmonkey.air_ok.model.TournamentManager;
+import fr.utln.jmonkey.air_ok.model.ArcadeEnvironment;
 import fr.utln.jmonkey.air_ok.model.rules.ScoreRules;
 
 public class GameState extends BaseAppState implements PhysicsCollisionListener {
@@ -92,6 +93,7 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
     private ViewPort leftPlayerViewPort;
     private ViewPort rightPlayerViewPort;
     private Table table;
+    private ArcadeEnvironment arcadeEnvironment;
     private Player playerOne;
     private Player playerTwo;
     private BitmapText scoreText;
@@ -164,6 +166,8 @@ public class GameState extends BaseAppState implements PhysicsCollisionListener 
 
         table = new Table(simpleApp.getAssetManager(), gameNode, bulletAppState);
         table.initTable();
+        arcadeEnvironment = new ArcadeEnvironment(simpleApp.getAssetManager(), gameNode);
+        arcadeEnvironment.initEnvironment();
         setupShadows();
 
         puck = new Puck(simpleApp.getAssetManager(), gameNode, bulletAppState);
